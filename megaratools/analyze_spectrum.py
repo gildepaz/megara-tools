@@ -109,7 +109,7 @@ def main(args=None):
           
        for ifile in list_files:
           hdulist = fits.open(ifile)
-          tbdata = hdulist[0].data
+          tbdata = hdulist[0].data*1e17
           prihdr = hdulist[0].header
           lambda0 = prihdr['CRVAL1']
           cdelt = prihdr['CDELT1']
@@ -218,7 +218,7 @@ def main(args=None):
           pars_lin = [fitout_lin.params['slope'].value, fitout_lin.params['yord'].value,
                      fitout_lin.chisqr]
           if (args.verbose):
-              print("Output(slope,yord): %10.3E %10.3E"%(fitout_lin.params['slope'].value, fitout_lin.params['yord'].value))
+              print("Output(slope*E-17,yord*E-17): %10.3E %10.3E"%(fitout_lin.params['slope'].value, fitout_lin.params['yord'].value))
               print("Best-fitting chisqr continuum: %10.3E" % (fitout_lin.chisqr))
           fit_con = linfunc(fitted_p_lin, wcont)
           residuals = fcont - fit_con
@@ -326,17 +326,17 @@ def main(args=None):
               pars_gh=[fitout_gh.params['amp'].value,fitout_gh.params['center'].value,fitout_gh.params['sigma'].value,fitout_gh.params['skew'].value,fitout_gh.params['kurt'].value,fitout_gh.chisqr]
               fit_gh=gaussfunc_gh(fitted_p_gh,wline)
               if (args.verbose):
-                  print ("Output(i0,l0,sigma,skew,kurt): %10.3E %5.2f %5.2f %10.3E %10.3E"%(fitout_gh.params['amp'].value, fitout_gh.params['center'].value, fitout_gh.params['sigma'].value, fitout_gh.params['skew'].value, fitout_gh.params['kurt'].value))
+                  print ("Output(i0*E-17,l0,sigma,skew,kurt): %10.3E %5.2f %5.2f %10.3E %10.3E"%(fitout_gh.params['amp'].value, fitout_gh.params['center'].value, fitout_gh.params['sigma'].value, fitout_gh.params['skew'].value, fitout_gh.params['kurt'].value))
           if args.method == 1:
               pars_gh=[fitout_gh.params['amp'].value,fitout_gh.params['center'].value,fitout_gh.params['sigma'].value,fitout_gh.chisqr]
               fit_gh=gaussfunc(fitted_p_gh,wline)
               if (args.verbose):
-                  print ("Output(i0,l0,sigma): %10.3E %5.2f %5.2f"%(fitout_gh.params['amp'].value, fitout_gh.params['center'].value, fitout_gh.params['sigma'].value))
+                  print ("Output(i0*E-17,l0,sigma): %10.3E %5.2f %5.2f"%(fitout_gh.params['amp'].value, fitout_gh.params['center'].value, fitout_gh.params['sigma'].value))
           if args.method == 2:
               pars_gh=[fitout_gh.params['amp1'].value,fitout_gh.params['center1'].value,fitout_gh.params['sigma1'].value,fitout_gh.params['amp2'].value,fitout_gh.params['center2'].value,fitout_gh.params['sigma2'].value,fitout_gh.chisqr] 
               fit_gh=gauss2func(fitted_p_gh,wline)
               if (args.verbose):
-                  print ("Output(i1,l1,sig1,i2,l2,sig2): %10.3E %5.2f %5.2f %10.3E %5.2f %5.2f"%(fitout_gh.params['amp1'].value, fitout_gh.params['center1'].value, fitout_gh.params['sigma1'].value, fitout_gh.params['amp2'].value, fitout_gh.params['center2'].value, fitout_gh.params['sigma2'].value))
+                  print ("Output(i1*E-17,l1,sig1,i2,l2,sig2): %10.3E %5.2f %5.2f %10.3E %5.2f %5.2f"%(fitout_gh.params['amp1'].value, fitout_gh.params['center1'].value, fitout_gh.params['sigma1'].value, fitout_gh.params['amp2'].value, fitout_gh.params['center2'].value, fitout_gh.params['sigma2'].value))
           eEWd=(rms*cdelt*(cdelt*np.sum(fpline)/lcmean)/(cdelt*np.sum(fpline)))*np.sqrt(2*len(fpline)+np.sum(fpline)/lcmean+(np.sum(fpline)/lcmean)**2/len(fpline))
           eEWm=(rms*cdelt*(cdelt*np.sum(fit_gh)/lcmean)/(cdelt*np.sum(fit_gh)))*np.sqrt(2*len(fit_gh)+np.sum(fit_gh)/lcmean+(np.sum(fpline)/lcmean)**2/len(fit_gh))
           if (args.verbose):
