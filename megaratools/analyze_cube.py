@@ -33,45 +33,48 @@ def main(args=None):
         textwrap.dedent('''\
              __________________  ANALYZE_RSS PROGRAM  __________________\n
              ____________  OUTPUT PARAMETER IN OUTPUT FITS  ____________
-             Property  channel description\n
-        ...  FM        #  1 Fitting method (0=gauss-hermite,1=1gauss,2=2gauss)
-        ...  CONTINUUM #  2 Continuum level in cgs
-        ...  NOISE     #  3 rms in cgs
-        ...  SNR       #  4 S/N at the peak of the line
-        ...  FLUXD     #  5 Flux from window_data - window_continuum
-        ...  EWD       #  6 Flux from window_data - window_continuum / mean_continuum
-        ...  FLUXF     #  7 Flux from best-fitting function(s)
-        ...  EWF       #  8 EW from best-fitting function(s)
-        ...  H0        #  9 amplitude for methods 0 & 1 & 2 (first gaussian)
-        ...  H1        # 10 central lambda for methods 0 & 1 & 2 (first gaussian)
-        ...  H2        # 11 sigma (in AA) for methods 0 & 1 & 2 (first gaussian)
-        ...  H3        # 12 h3 for method 0
-        ...  H4        # 13 h4 for method 0
-        ...  H0B       # 14 amplitude for method 2 (second gaussian)
-        ...  H1B       # 15 central lambda for method 2 (second gaussian)  
-        ...  H2B       # 16 sigma (in AA) for method 2 (second gaussian)
-        ...  H1KS      # 17 velocity in km/s from H1 (1st g)
-        ...  H2KS      # 18 sigma in km/s from H2 (1st g)
-        ...  H2KLC     # 19 sigma in km/s from H2 corrected for instrumental sigma (1st g)
-        ...  H1KSB     # 20 velocity in km/s from H1B (2nd g)
-        ...  H2KSB     # 21 sigma in km/s from H2B (2nd g)
-        ...  H2KLCB    # 22 sigma in km/s from H2 corrected for instrumental sigma (2nd g)
-        ...  FLUXF1    # 23 Flux from best-fitting 1st gaussian 
-        ...  FLUXF2    # 24 Flux from best-fitting 2nd gaussian 
-        ...  EFLUXD    # 25 Error of 4 (Flux from window_data - window_continuum) 
-        ...  EEWD      # 26 Error of 5 (Flux from window_data - window_continuum / mean_continuum)
-        ...  EFLUXF    # 27 Error of 6 (Flux from best-fitting function(s))
-        ...  EEWF      # 28 Error of 7 (EW from best-fitting function(s))
-        ...  EH1KS     # 29 Error of 16 (velocity in km/s from H1 (1st g))
-        ...  CHI2      # 30 best-fitting chi^2 (cgs)'''),
+             Property  channel(Python/other) description\n
+        ...  FM        #  0(1) Fitting method (0=gauss-hermite,1=1gauss,2=2gauss,3=doublet)
+        ...  CONTINUUM #  1(2) Continuum level in cgs
+        ...  NOISE     #  2(3) rms in cgs
+        ...  SNR       #  3(4) S/N at the peak of the line
+        ...  FLUXD     #  4(5) Flux from window_data - window_continuum in cgs
+        ...  EWD       #  5(6) Flux from window_data - window_continuum / mean_continuum in AA
+        ...  FLUXF     #  6(7) Flux from best-fitting function(s) in cgs
+        ...  EWF       #  7(8) EW from best-fitting function(s) in AA
+        ...  H0        #  8(9) amplitude for methods 0 & 1 & 2 (first gaussian)
+        ...  H1        #  9(10) central lambda for methods 0 & 1 & 2 (first gaussian)
+        ...  H2        # 10(11) sigma (in AA) for methods 0 & 1 & 2 (first gaussian)
+        ...  H3        # 11(12) h3 for method 0
+        ...  H4        # 12(13) h4 for method 0
+        ...  H0B       # 13(14) amplitude for method 2 (second gaussian)
+        ...  H1B       # 14(15) central lambda for method 2 (second gaussian) 
+        ...  H2B       # 15(16) sigma (in AA) for method 2 (second gaussian)
+        ...  H1KS      # 16(17) velocity in km/s from H1 (1st g)
+        ...  H1KSHC    # 17(18) velocity with heliocentric correction in km/s from H1 (1st g)
+        ...  H2KS      # 18(19) sigma in km/s from H2 (1st g)
+        ...  H2KLC     # 19(20) sigma in km/s from H2 corrected for instrumental sigma (1st g)
+        ...  H1KSB     # 20(21) velocity in km/s from H1B (2nd g)
+        ...  H1KSBHC   # 21(22) velocity with heliocentric correction in km/s from H1B (2nd g)
+        ...  H2KSB     # 22(23) sigma in km/s from H2B (2nd g)
+        ...  H2KLCB    # 23(24) sigma in km/s from H2 corrected for instrumental sigma (2nd g)
+        ...  FLUXF1    # 24(25) Flux from best-fitting 1st gaussian
+        ...  FLUXF2    # 25(26) Flux from best-fitting 2nd gaussian
+        ...  EFLUXD    # 26(27) Error of 4 (Flux from window_data - window_continuum)
+        ...  EEWD      # 27(28) Error of 5 (Flux from window_data - window_continuum / mean_continuum)
+        ...  EFLUXF    # 28(29) Error of 6 (Flux from best-fitting function(s))
+        ...  EEWF      # 29(30) Error of 7 (EW from best-fitting function(s))
+        ...  EH1KS     # 30(31) Error of 16 (velocity in km/s from H1 (1st g))
+        ...  EH1KSB    # 31(32) Error of 20 (velocity in km/s from H1 (2nd g))
+        ...  CHI2      # 32(33) best-fitting chi^2 (cgs)'''),
         prog='analyze_cube')
     
     parser.add_argument('-s', '--spectrum', metavar='CUBE FILE', help='Datacube input file', type=argparse.FileType('rb'))
-    parser.add_argument('-f', '--method', default=0, choices=[0,1,2], metavar='FITTING FUNCTION (0,1,2)', help='Fitting function (0=gauss_hermite, 1=gauss, 2=double_gauss)', type=int)
+    parser.add_argument('-f', '--method', default=0, choices=[0,1,2,3], metavar='FITTING FUNCTION (0,1,2,3)', help='Fitting function (0=gauss_hermite, 1=gauss, 2=two_gauss, 3=doublet)', type=int)
     parser.add_argument('-S', '--limsnr', default=5, metavar='MINIMUM S/N', help='Mininum Signal-to-noise ratio in each spaxel', type=float)
     parser.add_argument('-w', '--ctwl', metavar='LINE CENTRAL WAVELENGTH', help='Central rest-frame wavelength for line (AA)',
                         type=float)
-    parser.add_argument('-k', '--use-peak', default=True, action="store_true", help='Use peak first guess on central wavelength')
+    parser.add_argument('-k', '--use-peak', default=False, action="store_true", help='Use peak first guess on central wavelength')
     parser.add_argument('-LW1', '--lcut1', metavar='LOWER WAVELENGTH - LINE', help='Lower rest-frame wavelength for line (AA)',
                         type=float)
     parser.add_argument('-LW2', '--lcut2', metavar='UPPER WAVELENGTH - LINE', help='Upper rest-frame wavelength for line (AA)',
@@ -90,7 +93,6 @@ def main(args=None):
                         type=float)
     parser.add_argument('-S2', '--scale-amp2', metavar='SCALE FACTOR FOR AMP2', help='Scale factor for amplitude 2', default=1.0, type=float)
     parser.add_argument('-z', '--redshift', metavar='REDSHIFT', help='Redshift for target and catalog lines', type=float)
-    parser.add_argument('-o', '--output', metavar='OUTPUT-PDF', help='Output PDF', type=argparse.FileType('bw'))
     parser.add_argument('-v', '--verbose', default=False, action="store_true", help='Verbose mode for fitting results?')
     parser.add_argument('-O', '--output-rss', default="analyze_rss.fits", metavar='OUTPUT RSS FILE', help='Output RSS file', type=argparse.FileType('bw'))
     parser.add_argument('-of', '--output-fibers', metavar='OUTPUT FIBERS LIST', help='Output list of fibers above minimum Signal-to-noise ratio', type=argparse.FileType('bw'))
@@ -99,6 +101,7 @@ def main(args=None):
     parser.add_argument('-H', '--heliocentric', default=False, action="store_true", help='Apply heliocentric correction to velocities?')
     parser.add_argument('-co', '--coord', metavar='TARGET COORDINATES', help='Coordinates ("01:58:00 +65:43:05")')
     parser.add_argument('-tm', '--time', metavar='TIME', help='Time in format "2019-09-24T02:23:22.19"')
+    parser.add_argument('-d', '--distance', metavar='FIXED AA BETWEEN LINES', help='Fixed distance between lines (AA)', default=0., type=float)
 
     args = parser.parse_args(args=args)
     
@@ -111,23 +114,15 @@ def main(args=None):
     nonfit = float('NaN') # Value assigned to the out parameters when fit is not performed (could be 0. or NaN)
     zero = np.float64(0.0)
 
-# Heliocentric correction
-    if (args.heliocentric and args.coord is not None and args.time is not None):
-        gtc = EarthLocation.of_site('lapalma')
-        heliocorr = SkyCoord(args.coord, frame='fk5', unit=(u.hourangle, u.deg)).radial_velocity_correction('heliocentric', obstime=Time(args.time), location=gtc)
-        helio2 = heliocorr.to(u.km/u.s)
-        vheliocorr = float(helio2.value)
-        if (args.verbose):
-            print ("Heliocentric correction (km/s): %5.2f"%(vheliocorr))
-    else:
-        if (args.verbose):
-            print ("No heliocentric correction is computed.")
-        vheliocorr = 0.
-
-    if args.redshift is not None:
+    if args.redshift != None:
        z=float(args.redshift)
     else:
        z=0.
+
+    if args.distance != None:
+       dist=float(args.distance)
+    else:
+       dist=0.
 
 # Plotting
 
@@ -220,11 +215,17 @@ def main(args=None):
        plt.show()
 
        answer = input('Continue (Y/n)? ')
-       if len(answer) is not 0 and answer[0].lower() == "n":
+       if len(answer) != 0 and answer[0].lower() == "n":
           sys.exit(1)
             
+# Heliocentric correction
+       if args.heliocentric:
+            gtc = EarthLocation.of_site('lapalma')
+            sc = SkyCoord(ra=prihdr['RADEG']*u.deg, dec=prihdr['DECDEG']*u.deg)
+            heliocorr = sc.radial_velocity_correction('heliocentric', obstime=Time(prihdr['DATE-OBS']), location=gtc)
+            vheliocorr = heliocorr.to(u.km/u.s).value
+
 # Reading spectrum/spectra
-#       with PdfPages(args.output) as pdf:
        FM = []
        CONTINUUM = []
        NOISE = []
@@ -238,6 +239,7 @@ def main(args=None):
        EFLUXF = [] # Error of Flux from best-fitting function
        EEWF = [] # Error of EW from best-fitting function
        EH1KS = [] # Error of H1KS (velocity)
+       EH1KSB = [] # Error of H1KSB (velocity)
        H0 = []
        H1 = []
        H2 = []
@@ -247,9 +249,11 @@ def main(args=None):
        H1B = []
        H2B = []
        H1KS = []
+       H1KSHC = []
        H2KS = []
        H2KLC = []
        H1KSB = []
+       H1KSBHC = []
        H2KSB = []
        H2KLCB = []
        FLUXF1 = []
@@ -258,13 +262,10 @@ def main(args=None):
        FIB = [] # list of of fibers with SNR above input threshold
 
        for jspec in range(1,ny+1):
-#           for jspec in range(70, 130):
+               print("Row: ", jspec, "/",ny+1)
                for ispec in range(1,nx+1):
-#                for ispec in range(70, 130):
-                  print("Spaxel: ",ispec,jspec)
                   FM.append(args.method)
-#                  plt.figure()
-                  tbdata = rss[:, jspec-1, ispec-1]
+                  tbdata = rss[:, jspec-1, ispec-1]*1e17
                   lambda_fin = lambda0 + (len(tbdata))*cdelt
 
                   flux = []
@@ -281,19 +282,6 @@ def main(args=None):
                          print ('unknown or not defined BUNIT [Jy, ELECTRON]')
                          sys.exit(1)
                       flux.append(flux_vector)
-
-#                  plt.xlim(float(args.pcut1),float(args.pcut2))
-
-#                  if "LR" in vph:
-#                      plt.plot(wave, flux, 'blue', label = 'input spectrum')
-#                      R=6000.0
-#                  else:
-#                      if "MR" in vph:
-#                          plt.plot(wave, flux, 'green', label = 'input spectrum')
-#                          R=12000.0
-#                      else:
-#                          plt.plot(wave, flux, 'red', label = 'input spectrum')
-#                          R=20000.0
 
                   fcont = []
                   wcont = []
@@ -377,12 +365,14 @@ def main(args=None):
                       peak=0.
                       rms=1E-31
 
+                  amp = sign*peak-lcmean
+
                   eEWd = (rms * cdelt * (cdelt * np.sum(fpline) / lcmean) / (cdelt * np.sum(fpline))) * np.sqrt(
                       2 * len(fpline) + np.sum(fpline) / lcmean + (np.sum(fpline) / lcmean) ** 2 / len(fpline))
 
-                  if np.isfinite(peak/rms) and (peak/rms) >= float(args.limsnr):
+                  if np.isfinite(peak/rms) and (np.abs(amp)/rms) >= float(args.limsnr):
                       FIB.append(ispec)
-                      SNR.append(peak/rms)
+                      SNR.append(np.abs(amp)/rms)
                       FLUXD.append(cdelt*np.sum(fpline))
                       EFLUXD.append(rms * cdelt * np.sqrt(2 * len(fpline) + (np.sum(fpline) / lcmean)))
                       EWD.append(cdelt*np.sum(fpline)/lcmean)
@@ -396,11 +386,10 @@ def main(args=None):
 
                   if (args.verbose):
                       print("BASIC NUMBERS:")
-                      print ("Fiber: %3d; Stat (mean,rms,lpk,pk,S/N): %10.3E %10.3E %5.2f %10.3E %5.2f"%(ispec,lcmean,rms,lpeak,peak,peak/rms))
+                      print ("Fiber: %3d; Stat (mean,rms,lpk,pk,S/N): %10.3E %10.3E %5.2f %10.3E %5.2f"%(ispec,lcmean,rms,lpeak,peak,np.abs(amp)/rms))
 
         # Initial guess on parameters
 
-                  amp = sign*peak-lcmean
                   if (args.use_peak) == False:
                     center = float(args.ctwl)*(1.+z)
                   else:
@@ -452,10 +441,27 @@ def main(args=None):
                         print ("FITTING METHOD: DOUBLE GAUSSIAN")
                         print ("Input(i1,l1,sig1,i2,l2,sig2):  %10.3E %5.2f %5.2f %10.3E %5.2f %5.2f"%(amp1, center1, sigma1, args.scale_amp2*amp2, center2, sigma2))
                       gausserr_gh = lambda p,x,y: gauss2func(p,x)-y
+                  if args.method == 3:
+                      umbral=0.0
+                      p_gh=Parameters()
+                      p_gh.add('amp1',value=amp1, vary=True, max=umbral)
+                      p_gh.add('amp2',value=amp1, vary=True, max=umbral)
+                      p_gh.add('center',value=center, vary=True)
+                      p_gh.add('sigma',value=1.2*sigma, vary=True, min=sigma)
+                      if (args.verbose):
+                        print ("FITTING METHOD: GAUSSIAN DOUBLET")
+                        print ("Input(i0,l0,sigma):  %10.3E %10.3E %5.2f %5.2f"%(amp1, amp1, center, sigma))
+                      gausserr_gh = lambda p,x,y: gaussfunc_doublet(p,x,z,dist)-y
+                      fitout_gh=minimize(gausserr_gh,p_gh,args=(wline,fpline))
+                      p_gh.add('center',value=center-dist, vary=True);
+                      fitout_gh2=minimize(gausserr_gh,p_gh,args=(wline,fpline))
+                      if (abs(abs(fitout_gh2.params['amp2'].value) - abs(fitout_gh2.params['amp1'].value)) < abs(abs(fitout_gh.params['amp2'].value) - abs(fitout_gh.params['amp1'].value))) and (center-dist > float(args.lcut1)*(1.+z)) and (fitout_gh2.params['amp1'].value < 0):
+                        p_gh.add('center',value=center-dist, vary=True)
+                      else:
+                        p_gh.add('center',value=center, vary=True)
 
                   fitout_gh=minimize(gausserr_gh,p_gh,args=(wline,fpline))
-                  if np.isfinite(peak/rms) and (peak/rms) >= float(args.limsnr) and args.verbose:
-    #                 print(ispec)
+                  if np.isfinite(peak/rms) and (np.abs(amp)/rms) >= float(args.limsnr) and args.verbose:
                      print(fit_report(fitout_gh.params, show_correl=False))
 
                   fitted_p_gh = fitout_gh.params
@@ -496,8 +502,14 @@ def main(args=None):
                       if (args.verbose):
                           print("Flux2 from model: %10.3E+/-%10.3E" % (cdelt * np.sum(fit_gh2), rms * cdelt * np.sqrt(2 * len(fit_gh2) + (np.sum(fit_gh2) / lcmean))))  # Errors as in Tresse et al. (1999)
 
+                  if args.method == 3:
+                      pars_gh=[fitout_gh.params['amp1'].value,fitout_gh.params['amp2'].value,fitout_gh.params['center'].value,fitout_gh.params['sigma'].value,fitout_gh.chisqr]
+                      fit_gh=gaussfunc_doublet(fitted_p_gh,wline,z,dist)
+                      if (args.verbose):
+                        print ("Output(i0,l0,sigma): %10.3E %10.3E %5.2f %5.2f"%(fitout_gh.params['amp1'].value, fitout_gh.params['amp2'].value, fitout_gh.params['center'].value, fitout_gh.params['sigma'].value))
                   eEWm = (rms * cdelt * (cdelt * np.sum(fit_gh) / lcmean) / (cdelt * np.sum(fit_gh))) * np.sqrt(
-                      2 * len(fit_gh) + np.sum(fit_gh) / lcmean + (np.sum(fpline) / lcmean) ** 2 / len(fit_gh))
+                  2 * len(fit_gh) + np.sum(fit_gh) / lcmean + (np.sum(fpline) / lcmean) ** 2 / len(fit_gh))
+
                   if (args.verbose):
                       print ("Best-fitting chisqr: %10.3E"%(fitout_gh.chisqr))
                       print("Flux & EW from data:  %10.3E+/-%10.3E %5.2f+/-%5.2f" % (
@@ -513,15 +525,13 @@ def main(args=None):
                       peak=0.
                       rms=1E-31
 
-                  if (np.isfinite(peak/rms)) and (peak/rms) >= float(args.limsnr):
+                  if (np.isfinite(peak/rms)) and (np.abs(amp)/rms) >= float(args.limsnr):
                       FLUXF.append(cdelt*np.sum(fit_gh))
                       EFLUXF.append(rms * cdelt * np.sqrt(2 * len(fit_gh)))
                       EWF.append(cdelt*np.sum(fit_gh)/lcmean)
                       EEWF.append(eEWm)
 
-#                      plt.plot(wcont, fit_con, 'red', label='Continuum fit')
                       resid_gh=fpline-fit_gh
-#                      plt.plot(wline, fit_gh+fit_lin, 'orange', label = 'best fit')
 
                       lflines = [lambda0 + (pf1 - crpix) * cdelt, lambda0 + (pf2 - crpix) * cdelt]
                       lmlines = [lambda0 + (pm1 - crpix) * cdelt, lambda0 + (pm2 - crpix) * cdelt]
@@ -554,12 +564,15 @@ def main(args=None):
                              EH1KS.append(((fitout_gh.params['center'].stderr)/float(args.ctwl))*c_km)
                           else:
                              EH1KS.append(nonfit)
+                          H1KSHC.append(vheliocorr+((fitout_gh.params['center'].value)/float(args.ctwl)-1.0)*c_km)
                           H2KS.append(((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)
                           if (np.isfinite(np.sqrt((((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))):
                              H2KLC.append(np.sqrt((((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))
                           else:
                              H2KLC.append(0.)
                           H1KSB.append(nonfit)
+                          EH1KSB.append(nonfit)
+                          H1KSBHC.append(nonfit)
                           H2KSB.append(nonfit)
                           H2KLCB.append(nonfit)
                           FLUXF1.append(nonfit)
@@ -578,12 +591,15 @@ def main(args=None):
                              EH1KS.append(((fitout_gh.params['center'].stderr)/float(args.ctwl))*c_km)
                           else:
                              EH1KS.append(nonfit)
+                          H1KSHC.append(vheliocorr+((fitout_gh.params['center'].value)/float(args.ctwl)-1.0)*c_km)
                           H2KS.append(((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)
                           if (np.isfinite(np.sqrt((((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))):
                              H2KLC.append(np.sqrt((((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))
                           else:
                              H2KLC.append(0.)
                           H1KSB.append(nonfit)
+                          EH1KSB.append(nonfit)
+                          H1KSBHC.append(nonfit)
                           H2KSB.append(nonfit)
                           H2KLCB.append(nonfit)
                           FLUXF1.append(nonfit)
@@ -602,12 +618,18 @@ def main(args=None):
                              EH1KS.append(((fitout_gh.params['center1'].stderr)/float(args.ctwl))*c_km)
                           else:
                              EH1KS.append(nonfit)
+                          H1KSHC.append(vheliocorr+((fitout_gh.params['center1'].value)/float(args.ctwl)-1.0)*c_km)
                           H2KS.append(((fitout_gh.params['sigma1'].value)/float(args.ctwl))*c_km)
                           if (np.isfinite(np.sqrt((((fitout_gh.params['sigma1'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))):
                              H2KLC.append(np.sqrt((((fitout_gh.params['sigma1'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))
                           else:
                              H2KLC.append(0.)
                           H1KSB.append(((fitout_gh.params['center2'].value)/float(args.ctwl)-1.0)*c_km)
+                          if (fitout_gh.params['center2'].stderr is not None):
+                             EH1KSB.append(((fitout_gh.params['center2'].stderr)/float(args.ctwl))*c_km)
+                          else:
+                             EH1KSB.append(nonfit)
+                          H1KSBHC.append(vheliocorr+((fitout_gh.params['center2'].value)/float(args.ctwl)-1.0)*c_km)
                           H2KSB.append(((fitout_gh.params['sigma2'].value)/float(args.ctwl))*c_km)
                           if (np.isfinite(np.sqrt((((fitout_gh.params['sigma2'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))):
                              H2KLCB.append(np.sqrt((((fitout_gh.params['sigma2'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))
@@ -617,6 +639,35 @@ def main(args=None):
                           s2 = fitout_gh.params['sigma2'].value
                           FLUXF1.append(1.064*fitout_gh.params['amp1'].value*(2.35*s1))
                           FLUXF2.append(1.064*fitout_gh.params['amp2'].value*(2.35*s2))
+
+                      if args.method == 3:
+                          H0.append(fitout_gh.params['amp1'].value)
+                          H1.append(fitout_gh.params['center'].value)
+                          H2.append(fitout_gh.params['sigma'].value)
+                          H3.append(nonfit)
+                          H4.append(nonfit)
+                          H0B.append(fitout_gh.params['amp2'].value)
+                          H1B.append(nonfit)
+                          H2B.append(nonfit)
+                          H1KS.append(((fitout_gh.params['center'].value)/float(args.ctwl)-1.0)*c_km)
+                          if (fitout_gh.params['center'].stderr is not None):
+                             EH1KS.append(((fitout_gh.params['center'].stderr)/float(args.ctwl))*c_km)
+                          else:
+                             EH1KS.append(nonfit)
+                          H1KSHC.append(vheliocorr+((fitout_gh.params['center'].value)/float(args.ctwl)-1.0)*c_km)
+                          H2KS.append(((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)
+                          if (np.isfinite(np.sqrt((((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))):
+                             H2KLC.append(np.sqrt((((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))
+                          else:
+                             H2KLC.append(0.)
+                          H1KSB.append(nonfit)
+                          EH1KSB.append(nonfit)
+                          H1KSBHC.append(nonfit)
+                          H2KSB.append(nonfit)
+                          H2KLCB.append(nonfit)
+                          s1 = fitout_gh.params['sigma'].value
+                          FLUXF1.append(1.064*fitout_gh.params['amp1'].value*(2.35*s1))
+                          FLUXF2.append(1.064*fitout_gh.params['amp2'].value*(2.35*s1))
                       CHI2.append(fitout_gh.chisqr)
                   else:
                       FLUXF.append(nonfit)
@@ -633,59 +684,66 @@ def main(args=None):
                       H2B.append(nonfit)
                       H1KS.append(nonfit)
                       EH1KS.append(nonfit)
+                      H1KSHC.append(nonfit)
                       H2KS.append(nonfit)
                       H2KLC.append(nonfit)
                       H1KSB.append(nonfit)
+                      EH1KSB.append(nonfit)
+                      H1KSBHC.append(nonfit)
                       H2KSB.append(nonfit)
                       H2KLCB.append(nonfit)
                       FLUXF1.append(nonfit)
                       FLUXF2.append(nonfit)
                       CHI2.append(nonfit)
 
-#                  plt.title('spaxel: '+str(ispec)+','+str(jspec))
-#                  plt.ylabel('flux [erg s$^{-1}$ cm$^{-2}$ A$^{-1}$]')
-#                  plt.xlabel('wavelength')
-#                  plt.legend()
-#                  pdf.savefig()
-#                  plt.close()
-
-# Storing output RSS file
+# Storing output cube products file
        data1 = ima[0].data
-       all_output = np.zeros([29,data1.shape[1],data1.shape[2]])
-#       all_output = np.zeros([29,60,60])
+       all_output = np.zeros([33,data1.shape[1],data1.shape[2]])
 
-# Assign each property to one of the 29 channels
-       all_output[0,:,:] = np.reshape(FM,(data1.shape[1],data1.shape[2]))        #  0+1 Fitting method (0=gauss-hermite,1=1gauss,2=2gauss)
-       all_output[1,:,:] = np.reshape(CONTINUUM,(data1.shape[1],data1.shape[2])) #  1+1 Continuum level in cgs
-       all_output[2,:,:] = np.reshape(NOISE,(data1.shape[1],data1.shape[2]))     #  2+1 rms in cgs
-       all_output[3,:,:] = np.reshape(SNR,(data1.shape[1],data1.shape[2]))       #  3+1 S/N at the peak of the line
-       all_output[4,:,:] = np.reshape(FLUXD,(data1.shape[1],data1.shape[2]))     #  4+1 Flux from window_data - window_continuum
-       all_output[5,:,:] = np.reshape(EWD,(data1.shape[1],data1.shape[2]))       #  5+1 Flux from window_data - window_continuum / mean_continuum
-       all_output[6,:,:] = np.reshape(FLUXF,(data1.shape[1],data1.shape[2]))     #  6+1 Flux from best-fitting function
-       all_output[7,:,:] = np.reshape(EWF,(data1.shape[1],data1.shape[2]))       #  7+1 EW from best-fitting function
-       all_output[8,:,:] = np.reshape(H0,(data1.shape[1],data1.shape[2]))        #  8+1 amplitude for methods 0 & 1 & 2 (first gaussian)
-       all_output[9,:,:] = np.reshape(H1,(data1.shape[1],data1.shape[2]))        #  9+1 central lambda for methods 0 & 1 & 2 (first gaussian)
-       all_output[10,:,:] = np.reshape(H2,(data1.shape[1],data1.shape[2]))       # 10+1 sigma (in AA) for methods 0 & 1 & 2 (first gaussian)
-       all_output[11,:,:] = np.reshape(H3,(data1.shape[1],data1.shape[2]))       # 11+1 h3 for method 0
-       all_output[12,:,:] = np.reshape(H4,(data1.shape[1],data1.shape[2]))       # 12+1 h4 for method 0
-       all_output[13,:,:] = np.reshape(H0B,(data1.shape[1],data1.shape[2]))      # 13+1 amplitude for method 2 (second gaussian)
-       all_output[14,:,:] = np.reshape(H1B,(data1.shape[1],data1.shape[2]))      # 14+1 central lambda for method 2 (second gaussian)
-       all_output[15,:,:] = np.reshape(H2B,(data1.shape[1],data1.shape[2]))      # 15+1 sigma (in AA) for method 2 (second gaussian)
-       all_output[16,:,:] = np.reshape(H1KS,(data1.shape[1],data1.shape[2]))     # 16+1 velocity in km/s from H1 (1st g)
-       all_output[17,:,:] = np.reshape(H2KS,(data1.shape[1],data1.shape[2]))     # 17+1 sigma in km/s from H2 (1st g)
-       all_output[18,:,:] = np.reshape(H2KLC,(data1.shape[1],data1.shape[2]))    # 18+1 sigma in km/s from H2 corrected for instrumental sigma (1st g)
-       all_output[19,:,:] = np.reshape(H1KSB,(data1.shape[1],data1.shape[2]))    # 19+1 velocity in km/s from H1B (2nd g)
-       all_output[20,:,:] = np.reshape(H2KSB,(data1.shape[1],data1.shape[2]))    # 20+1 sigma in km/s from H2B (2nd g)
-       all_output[21,:,:] = np.reshape(H2KLCB,(data1.shape[1],data1.shape[2]))   # 21+1 sigma in km/s from H2 corrected for instrumental sigma (2nd g)
-       all_output[22,:,:] = np.reshape(FLUXF1,(data1.shape[1],data1.shape[2]))   # 22+1 Flux from best-fitting 1st gaussian function
-       all_output[23,:,:] = np.reshape(FLUXF2,(data1.shape[1],data1.shape[2]))   # 23+1 Flux from best-fitting 2nd gaussian function
-       all_output[24,:,:] = np.reshape(EFLUXD,(data1.shape[1],data1.shape[2]))   # 24+1 Error of 4 (Flux from window_data - window_continuum)
-       all_output[25,:,:] = np.reshape(EEWD,(data1.shape[1],data1.shape[2]))     # 25+1 Error of 5 (Flux from window_data - window_continuum / mean_continuum)
-       all_output[26,:,:] = np.reshape(EFLUXF,(data1.shape[1],data1.shape[2]))   # 26+1 Error of 6 (Flux from best-fitting function)
-       all_output[27,:,:] = np.reshape(EEWF,(data1.shape[1],data1.shape[2]))     # 27+1 Error of 7 (EW from best-fitting function)
-       all_output[28,:,;] = np.reshape(EH1KS,(data1.shape[1],data1.shape[2]))    # 28+1 Error of 16 (velocity in km/s from H1 (1st g))
-       all_output[29,:,:] = np.reshape(CHI2,(data1.shape[1],data1.shape[2]))     # 29+1 best-fitting chi^2 (cgs)
-    
+# Assign each property to one of the 33 channels (order)
+       all_output[0,:,:] = np.reshape(FM,(data1.shape[1],data1.shape[2]))        #  0(1) Fitting method (0=gauss-hermite,1=1gauss,2=2gauss)
+       all_output[1,:,:] = np.reshape(CONTINUUM,(data1.shape[1],data1.shape[2])) #  1(2) Continuum level in cgs
+       all_output[2,:,:] = np.reshape(NOISE,(data1.shape[1],data1.shape[2]))     #  2(3) rms in cgs
+       all_output[3,:,:] = np.reshape(SNR,(data1.shape[1],data1.shape[2]))       #  3(4) S/N at the peak of the line
+       all_output[4,:,:] = np.reshape(FLUXD,(data1.shape[1],data1.shape[2]))     #  (Flux from window_data - window_continuum)*1e+17
+       all_output[4,:,:] = all_output[4,:,:]*1e-17                               #  4(5) Flux from window_data - window_continuum
+       all_output[5,:,:] = np.reshape(EWD,(data1.shape[1],data1.shape[2]))       #  5(6) Flux from window_data - window_continuum / mean_continuum
+       all_output[6,:,:] = np.reshape(FLUXF,(data1.shape[1],data1.shape[2]))     #  (Flux from best-fitting function)*1e+17
+       all_output[6,:,:] = all_output[6,:,:]*1e-17                               #  6(7) Flux from best-fitting function
+       all_output[7,:,:] = np.reshape(EWF,(data1.shape[1],data1.shape[2]))       #  7(8) EW from best-fitting function
+       all_output[8,:,:] = np.reshape(H0,(data1.shape[1],data1.shape[2]))        #  (amplitude for methods 0 & 1 & 2 (first gaussian))*1e+17
+       all_output[8,:,:] = all_output[8,:,:]*1e-17                               #  8(9) amplitude for methods 0 & 1 & 2 (first gaussian)
+       all_output[9,:,:] = np.reshape(H1,(data1.shape[1],data1.shape[2]))        #  9(10) central lambda for methods 0 & 1 & 2 (first gaussian)
+       all_output[10,:,:] = np.reshape(H2,(data1.shape[1],data1.shape[2]))       # 10(11) sigma (in AA) for methods 0 & 1 & 2 (first gaussian)
+       all_output[11,:,:] = np.reshape(H3,(data1.shape[1],data1.shape[2]))       # 11(12) h3 for method 0
+       all_output[12,:,:] = np.reshape(H4,(data1.shape[1],data1.shape[2]))       # 12(13) h4 for method 0
+       all_output[13,:,:] = np.reshape(H0B,(data1.shape[1],data1.shape[2]))      # (amplitude for method 2 (second gaussian))*1e+17
+       all_output[13,:,:] = all_output[13,:,:]*1e-17                             # 13(14) amplitude for method 2 (second gaussian)
+       all_output[14,:,:] = np.reshape(H1B,(data1.shape[1],data1.shape[2]))      # 14(15) central lambda for method 2 (second gaussian)
+       all_output[15,:,:] = np.reshape(H2B,(data1.shape[1],data1.shape[2]))      # 15(16) sigma (in AA) for method 2 (second gaussian)
+       all_output[16,:,:] = np.reshape(H1KS,(data1.shape[1],data1.shape[2]))     # 16(17) velocity in km/s from H1 (1st g)
+       all_output[17,:,:] = np.reshape(H1KSHC,(data1.shape[1],data1.shape[2]))   # 17(18) velocity with heliocentric correction in km/s from H1 (1st g)
+       all_output[18,:,:] = np.reshape(H2KS,(data1.shape[1],data1.shape[2]))     # 18(19) sigma in km/s from H2 (1st g)
+       all_output[19,:,:] = np.reshape(H2KLC,(data1.shape[1],data1.shape[2]))    # 19(20) sigma in km/s from H2 corrected for instrumental sigma (1st g)
+       all_output[20,:,:] = np.reshape(H1KSB,(data1.shape[1],data1.shape[2]))    # 20(21) velocity in km/s from H1B (2nd g)
+       all_output[21,:,:] = np.reshape(H1KSBHC,(data1.shape[1],data1.shape[2]))  # 21(22) velocity with heliocentric correction in km/s from H1B (2nd g)
+       all_output[22,:,:] = np.reshape(H2KSB,(data1.shape[1],data1.shape[2]))    # 22(23) sigma in km/s from H2B (2nd g)
+       all_output[23,:,:] = np.reshape(H2KLCB,(data1.shape[1],data1.shape[2]))   # 23(24) sigma in km/s from H2 corrected for instrumental sigma (2nd g)
+       all_output[24,:,:] = np.reshape(FLUXF1,(data1.shape[1],data1.shape[2]))   # (Flux from best-fitting 1st gaussian function)*1e+17
+       all_output[24,:,:] = all_output[24,:,:]*1e-17                             # 24(25) Flux from best-fitting 1st gaussian function 
+       all_output[25,:,:] = np.reshape(FLUXF2,(data1.shape[1],data1.shape[2]))   # (Flux from best-fitting 2nd gaussian function)*1e+17
+       all_output[25,:,:] = all_output[25,:,:]*1e-17                             # 25(26) Flux from best-fitting 2nd gaussian function
+       all_output[26,:,:] = np.reshape(EFLUXD,(data1.shape[1],data1.shape[2]))   # (Error of 4 (Flux from window_data - window_continuum))*1e+17
+       all_output[26,:,:] = all_output[26,:,:]*1e-17                             # 26(27) Error of 4 (Flux from window_data - window_continuum)
+       all_output[27,:,:] = np.reshape(EEWD,(data1.shape[1],data1.shape[2]))     # (Error of 5 (Flux from window_data - window_continuum / mean_continuum))*1e+17
+       all_output[27,:,:] = all_output[27,:,:]*1e-17                             # 27(28) Error of 5 (Flux from window_data - window_continuum / mean_continuum)
+       all_output[28,:,:] = np.reshape(EFLUXF,(data1.shape[1],data1.shape[2]))   # (Error of 6 (Flux from best-fitting function))*1e+17
+       all_output[28,:,:] = all_output[28,:,:]*1e-17                             # 28(29) Error of 6 (Flux from best-fitting function)
+       all_output[29,:,:] = np.reshape(EEWF,(data1.shape[1],data1.shape[2]))     # 29(30) Error of 7 (EW from best-fitting function)
+       all_output[30,:,:] = np.reshape(EH1KS,(data1.shape[1],data1.shape[2]))    # 30(31) Error of 16 (velocity in km/s from H1 (1st g))
+       all_output[31,:,:] = np.reshape(EH1KSB,(data1.shape[1],data1.shape[2]))   # 31(32) Error of 20 (velocity in km/s from H1 (2nd g))
+       all_output[32,:,:] = np.reshape(CHI2,(data1.shape[1],data1.shape[2]))     # 32(33) best-fitting chi^2 (cgs)
+
        ima[0].data = all_output
        ima.writeto(args.output_rss, overwrite = True)
 

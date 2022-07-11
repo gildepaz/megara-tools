@@ -61,7 +61,17 @@ def gaussfunc_gh(paramsin,x):
     gaustot_gh=amp*np.exp(-.5*g1**2)*(1+skew*(c1*g1+c3*g1**3)+kurt*(c5+c2*g1**2+c4*(g1**4)))
     return gaustot_gh
 
-
+def gaussfunc_doublet(paramsin,x,z,dist):
+    amp1=paramsin['amp1'].value;
+    amp2=paramsin['amp2'].value;
+    center1=paramsin['center'].value;
+    sigma=paramsin['sigma'].value;
+    g1=(x-center1)/sigma
+    g1_2=(x-center1-dist*(1+z))/sigma
+    gaus1=amp1*np.exp(-.5*g1**2)+amp2*np.exp(-.5*g1_2**2)
+    gaustot_gh = gaus1
+    return gaustot_gh
+    
 def linfunc(paramsin,x):
     slope=paramsin['slope'].value
     yord=paramsin['yord'].value
