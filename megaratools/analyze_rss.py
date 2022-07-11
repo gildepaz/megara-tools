@@ -34,36 +34,36 @@ def main(args=None):
              __________________  ANALYZE_RSS PROGRAM  __________________\n
              ____________  OUTPUT PARAMETER IN OUTPUT FITS  ____________
              Property  channel description\n
-        ...  FM        #  1 Fitting method (0=gauss-hermite,1=1gauss,2=2gauss)
-        ...  CONTINUUM #  2 Continuum level in cgs
-        ...  NOISE     #  3 rms in cgs
-        ...  SNR       #  4 S/N at the peak of the line
-        ...  FLUXD     #  5 Flux from window_data - window_continuum
-        ...  EWD       #  6 Flux from window_data - window_continuum / mean_continuum
-        ...  FLUXF     #  7 Flux from best-fitting function(s)
-        ...  EWF       #  8 EW from best-fitting function(s)
-        ...  H0        #  9 amplitude for methods 0 & 1 & 2 (first gaussian)
-        ...  H1        # 10 central lambda for methods 0 & 1 & 2 (first gaussian)
-        ...  H2        # 11 sigma (in AA) for methods 0 & 1 & 2 (first gaussian)
-        ...  H3        # 12 h3 for method 0
-        ...  H4        # 13 h4 for method 0
-        ...  H0B       # 14 amplitude for method 2 (second gaussian)
-        ...  H1B       # 15 central lambda for method 2 (second gaussian)  
-        ...  H2B       # 16 sigma (in AA) for method 2 (second gaussian)
-        ...  H1KS      # 17 velocity in km/s from H1 (1st g)
-        ...  H2KS      # 18 sigma in km/s from H2 (1st g)
-        ...  H2KLC     # 19 sigma in km/s from H2 corrected for instrumental sigma (1st g)
-        ...  H1KSB     # 20 velocity in km/s from H1B (2nd g)
-        ...  H2KSB     # 21 sigma in km/s from H2B (2nd g)
-        ...  H2KLCB    # 22 sigma in km/s from H2 corrected for instrumental sigma (2nd g)
-        ...  FLUXF1    # 23 Flux from best-fitting 1st gaussian 
-        ...  FLUXF2    # 24 Flux from best-fitting 2nd gaussian 
-        ...  EFLUXD    # 25 Error of 4 (Flux from window_data - window_continuum) 
-        ...  EEWD      # 26 Error of 5 (Flux from window_data - window_continuum / mean_continuum)
-        ...  EFLUXF    # 27 Error of 6 (Flux from best-fitting function(s))
-        ...  EEWF      # 28 Error of 7 (EW from best-fitting function(s))
-        ...  EH1KS     # 29 Error of 16 (velocity in km/s from H1 (1st g))
-        ...  CHI2      # 30 best-fitting chi^2 (cgs)'''),
+        ...  FM        #  0 Fitting method (0=gauss-hermite,1=1gauss,2=2gauss)
+        ...  CONTINUUM #  1 Continuum level in cgs
+        ...  NOISE     #  2 rms in cgs
+        ...  SNR       #  3 S/N at the peak of the line
+        ...  FLUXD     #  4 Flux from window_data - window_continuum
+        ...  EWD       #  5 Flux from window_data - window_continuum / mean_continuum
+        ...  FLUXF     #  6 Flux from best-fitting function(s)
+        ...  EWF       #  7 EW from best-fitting function(s)
+        ...  H0        #  8 amplitude for methods 0 & 1 & 2 (first gaussian)
+        ...  H1        #  9 central lambda for methods 0 & 1 & 2 (first gaussian)
+        ...  H2        # 10 sigma (in AA) for methods 0 & 1 & 2 (first gaussian)
+        ...  H3        # 11 h3 for method 0
+        ...  H4        # 12 h4 for method 0
+        ...  H0B       # 13 amplitude for method 2 (second gaussian)
+        ...  H1B       # 14 central lambda for method 2 (second gaussian)  
+        ...  H2B       # 15 sigma (in AA) for method 2 (second gaussian)
+        ...  H1KS      # 16 velocity in km/s from H1 (1st g)
+        ...  H2KS      # 17 sigma in km/s from H2 (1st g)
+        ...  H2KLC     # 18 sigma in km/s from H2 corrected for instrumental sigma (1st g)
+        ...  H1KSB     # 19 velocity in km/s from H1B (2nd g)
+        ...  H2KSB     # 20 sigma in km/s from H2B (2nd g)
+        ...  H2KLCB    # 21 sigma in km/s from H2 corrected for instrumental sigma (2nd g)
+        ...  FLUXF1    # 22 Flux from best-fitting 1st gaussian 
+        ...  FLUXF2    # 23 Flux from best-fitting 2nd gaussian 
+        ...  EFLUXD    # 24 Error of 4 (Flux from window_data - window_continuum) 
+        ...  EEWD      # 25 Error of 5 (Flux from window_data - window_continuum / mean_continuum)
+        ...  EFLUXF    # 26 Error of 6 (Flux from best-fitting function(s))
+        ...  EEWF      # 27 Error of 7 (EW from best-fitting function(s))
+        ...  EH1KS     # 28 Error of 16 (velocity in km/s from H1 (1st g))
+        ...  CHI2      # 29 best-fitting chi^2 (cgs)'''),
         prog='analyze_rss')
     
     parser.add_argument('-s', '--spectrum', metavar='RSS FILE', help='RSS input file', type=argparse.FileType('rb'))
@@ -219,7 +219,7 @@ def main(args=None):
        plt.show()
 
        answer = input('Continue (Y/n)? ')
-       if len(answer) is not 0 and answer[0].lower() == "n":
+       if len(answer) != 0 and answer[0].lower() == "n":
           sys.exit(1)
             
 # Reading spectrum/spectra
@@ -650,36 +650,36 @@ def main(args=None):
        all_output = np.zeros([data1.shape[0],30])
         
 # Assign each property to one of the 29 channels
-       all_output[:,0] = FM        #  0+1 Fitting method (0=gauss-hermite,1=1gauss,2=2gauss)
-       all_output[:,1] = CONTINUUM #  1+1 Continuum level in cgs
-       all_output[:,2] = NOISE     #  2+1 rms in cgs
-       all_output[:,3] = SNR       #  3+1 S/N at the peak of the line
-       all_output[:,4] = FLUXD     #  4+1 Flux from window_data - window_continuum
-       all_output[:,5] = EWD       #  5+1 Flux from window_data - window_continuum / mean_continuum
-       all_output[:,6] = FLUXF     #  6+1 Flux from best-fitting function
-       all_output[:,7] = EWF       #  7+1 EW from best-fitting function
-       all_output[:,8] = H0        #  8+1 amplitude for methods 0 & 1 & 2 (first gaussian)
-       all_output[:,9] = H1        #  9+1 central lambda for methods 0 & 1 & 2 (first gaussian)
-       all_output[:,10] = H2       # 10+1 sigma (in AA) for methods 0 & 1 & 2 (first gaussian)
-       all_output[:,11] = H3       # 11+1 h3 for method 0
-       all_output[:,12] = H4       # 12+1 h4 for method 0
-       all_output[:,13] = H0B      # 13+1 amplitude for method 2 (second gaussian)
-       all_output[:,14] = H1B      # 14+1 central lambda for method 2 (second gaussian)
-       all_output[:,15] = H2B      # 15+1 sigma (in AA) for method 2 (second gaussian)
-       all_output[:,16] = H1KS     # 16+1 velocity in km/s from H1 (1st g)
-       all_output[:,17] = H2KS     # 17+1 sigma in km/s from H2 (1st g)
-       all_output[:,18] = H2KLC    # 18+1 sigma in km/s from H2 corrected for instrumental sigma (1st g)
-       all_output[:,19] = H1KSB    # 19+1 velocity in km/s from H1B (2nd g)
-       all_output[:,20] = H2KSB    # 20+1 sigma in km/s from H2B (2nd g)
-       all_output[:,21] = H2KLCB   # 21+1 sigma in km/s from H2 corrected for instrumental sigma (2nd g)
-       all_output[:,22] = FLUXF1   # 22+1 Flux from best-fitting 1st gaussian function
-       all_output[:,23] = FLUXF2   # 23+1 Flux from best-fitting 2nd gaussian function
-       all_output[:,24] = EFLUXD   # 24+1 Error of 4 (Flux from window_data - window_continuum)
-       all_output[:,25] = EEWD     # 25+1 Error of 5 (Flux from window_data - window_continuum / mean_continuum)
-       all_output[:,26] = EFLUXF   # 26+1 Error of 6 (Flux from best-fitting function)
-       all_output[:,27] = EEWF     # 27+1 Error of 7 (EW from best-fitting function)
-       all_output[:,28] = EH1KS    # 28+1 Error of 16 (velocity in km/s from H1 (1st g))
-       all_output[:,29] = CHI2     # 29+1 best-fitting chi^2 (cgs)
+       all_output[:,0] = FM        #  0 Fitting method (0=gauss-hermite,1=1gauss,2=2gauss)
+       all_output[:,1] = CONTINUUM #  1 Continuum level in cgs
+       all_output[:,2] = NOISE     #  2 rms in cgs
+       all_output[:,3] = SNR       #  3 S/N at the peak of the line
+       all_output[:,4] = FLUXD     #  4 Flux from window_data - window_continuum
+       all_output[:,5] = EWD       #  5 Flux from window_data - window_continuum / mean_continuum
+       all_output[:,6] = FLUXF     #  6 Flux from best-fitting function
+       all_output[:,7] = EWF       #  7 EW from best-fitting function
+       all_output[:,8] = H0        #  8 amplitude for methods 0 & 1 & 2 (first gaussian)
+       all_output[:,9] = H1        #  9 central lambda for methods 0 & 1 & 2 (first gaussian)
+       all_output[:,10] = H2       # 10 sigma (in AA) for methods 0 & 1 & 2 (first gaussian)
+       all_output[:,11] = H3       # 11 h3 for method 0
+       all_output[:,12] = H4       # 12 h4 for method 0
+       all_output[:,13] = H0B      # 13 amplitude for method 2 (second gaussian)
+       all_output[:,14] = H1B      # 14 central lambda for method 2 (second gaussian)
+       all_output[:,15] = H2B      # 15 sigma (in AA) for method 2 (second gaussian)
+       all_output[:,16] = H1KS     # 16 velocity in km/s from H1 (1st g)
+       all_output[:,17] = H2KS     # 17 sigma in km/s from H2 (1st g)
+       all_output[:,18] = H2KLC    # 18 sigma in km/s from H2 corrected for instrumental sigma (1st g)
+       all_output[:,19] = H1KSB    # 19 velocity in km/s from H1B (2nd g)
+       all_output[:,20] = H2KSB    # 20 sigma in km/s from H2B (2nd g)
+       all_output[:,21] = H2KLCB   # 21 sigma in km/s from H2 corrected for instrumental sigma (2nd g)
+       all_output[:,22] = FLUXF1   # 22 Flux from best-fitting 1st gaussian function
+       all_output[:,23] = FLUXF2   # 23 Flux from best-fitting 2nd gaussian function
+       all_output[:,24] = EFLUXD   # 24 Error of 4 (Flux from window_data - window_continuum)
+       all_output[:,25] = EEWD     # 25 Error of 5 (Flux from window_data - window_continuum / mean_continuum)
+       all_output[:,26] = EFLUXF   # 26 Error of 6 (Flux from best-fitting function)
+       all_output[:,27] = EEWF     # 27 Error of 7 (EW from best-fitting function)
+       all_output[:,28] = EH1KS    # 28 Error of 16 (velocity in km/s from H1 (1st g))
+       all_output[:,29] = CHI2     # 29 best-fitting chi^2 (cgs)
     
        ima[0].data = all_output
        ima.writeto(args.output_rss, overwrite = True)
