@@ -1,4 +1,5 @@
 import math
+from math import pi,sin,cos
 from packaging.version import parse, Version
 import sys
 import os
@@ -9,6 +10,7 @@ import matplotlib.collections as mcoll
 import matplotlib.colors as mcolors
 import matplotlib.transforms as mtrans
 import matplotlib.transforms as mtransforms
+from matplotlib.patches import Ellipse
 import numpy as np
 from numpy import save
 import matplotlib as mpl
@@ -22,6 +24,9 @@ warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 from megaradrp.processing.cube import main as megaracube
 from megaradrp.processing.cube import calc_matrix_from_fiberconf
 from megaradrp.processing.cube import create_cube_from_array
+
+M_SQRT3 = math.sqrt(3)
+M_1_SQRT3 = 1 / M_SQRT3
 
 def populate_array(rows, columns):
    array_dic = {}
@@ -57,6 +62,32 @@ def residuals(paramsin,x,y,z,ez,errors):
     else:
         weighted = zmodel
     return weighted
+
+def mfunc(paramsin,x,y,rmax):
+    import numpy as np
+    import matplotlib.pyplot as plt
+    vsys = paramsin['vsys'].value
+    pa = paramsin['pa'].value
+    if (args.i_msk is None): 
+       incldg = paramsin['incldg'].value
+    else:
+       incldg = args.i_msk
+    a = paramsin['a'].value
+    b = paramsin['b'].value
+    xcenter = paramsin['xcenter'].value
+    ycenter = paramsin['ycenter'].value
+    inclrad = incldg*np.pi/180.
+    theta0 = (pa-360)*(np.pi/180.)
+    r, theta = cart2polar(x, y, xcenter, ycenter)
+    theta = theta + np.pi - theta0
+    theta = np.where(theta<2*np.pi, theta, theta-2*np.pi)
+    thetag = np.arctan(np.tan(theta)/np.cos(inclrad))
+    thetag = np.where((np.abs(theta)>np.pi/2.) & ((np.abs(theta)<3.*np.pi/2.)), thetag+np.pi, thetag)
+    thetag = np.where((np.abs(theta)>3.*np.pi/2.), thetag+2.*np.pi, thetag)
+    rr = r*(np.cos(theta)/np.cos(thetag))
+    mask = r*0.+1.
+    mask[rr > rmax] = np.nan
+    return mask
 
 def vfunc(paramsin,x,y,z):
     import numpy as np
@@ -192,6 +223,7 @@ def recompute_wcs(hdr,ora,odec):
     hdr['PC2_1'] = -sin_pa
     x = hdr['CRVAL1']
     y = hdr['CRVAL2']
+#    print (x, y, math.cos(y*np.pi/180.))
     hdr['CRVAL1'] = x + (ora/3600.)/math.cos(y*np.pi/180.)
     hdr['CRVAL2'] = y + (odec/3600.)
     return hdr
@@ -218,9 +250,6 @@ def hexplot(axis, x, y, z, scale=1.0, extent=None,
 
     x = np.array(x, float)
     y = np.array(y, float)
-
-    M_SQRT3 = math.sqrt(3)
-    M_1_SQRT3 = 1 / M_SQRT3
 
     sx = 2 * M_1_SQRT3 * scale * 0.99
     sy = scale * 0.99
@@ -330,8 +359,7 @@ def polar2cart(r, theta):
     x = r * np.sin(theta)
     return x, y
 
-def main(args=None):
-#if __name__ == '__main__':
+if __name__ == '__main__':
     import math
     import matplotlib.pyplot as plt
     import astropy.io.fits as fits
@@ -352,18 +380,21 @@ def main(args=None):
     parser = argparse.ArgumentParser(description='Input RSS', prog='Kinematic model for MEGARA RSS data')
     parser.add_argument('-s', '--spectrum', metavar='RSS SPECTRUM/PRODUCT', help='FITS RSS data or product', type=argparse.FileType('rb'))
     parser.add_argument('-c', '--channel', metavar='RSS VELOCITY CHANNEL', help='Channel of RSS product for velocity', type=int, default=16)
-    parser.add_argument('-e', '--echannel', metavar='RSS VELOCITY ERROR CHANNEL', help='Channel of RSS product for velocity error', type=int, default=28)
+    parser.add_argument('-e', '--echannel', metavar='RSS VELOCITY ERROR CHANNEL', help='Channel of RSS product for velocity error', type=int, default=30)
     parser.add_argument('-Z1', '--zcut1', metavar='LOWER CUT LIMIT (FOR RSS OR DIRECT IMAGE)', help='Lower cut limit for plot', type=float)
     parser.add_argument('-Z2', '--zcut2', metavar='UPPER CUT LIMIT (FOR RSS OR DIRECT IMAGE)', help='Upper cut limit for plot', type=float)
     parser.add_argument('-p', '--palette', metavar='PALETTE', default='jet', help='Matplotlib palette of the plot')
     parser.add_argument('-u', '--units', metavar='UNITS LABEL', default="km s$^{-1}$", help='Label of the plot')
     parser.add_argument('-CO', '--commissioning', default=False, action="store_true", help='Commissioning image?')
     parser.add_argument('-N', '--signal-to-noise', metavar='MINIMUM SIGNAL TO NOISE RATIO', help='Lower limit in Signal-to-Noise', type=float)
+    parser.add_argument('-csnr', '--snr-channel', metavar='S/N CHANNEL', help='Channel of RSS product for S/N', type=int, default=3) 
     parser.add_argument('-vmin', '--vmin', metavar='MINIMUM VELOCITY (km/s)', help='Minimum velocity to be considered in fit', type=float)
     parser.add_argument('-vmax', '--vmax', metavar='MAXIMUM VELOCITY (km/s)', help='Maximum velocity to be considered in fit', type=float)
     parser.add_argument('-smin', '--minimum-sigma', metavar='MINIMUM SIGMA (km/s)', help='Minimum sigma (corrected for instrumental effects) to be considered in fit', type=float)
+    parser.add_argument('-csigma', '--sigma-channel', metavar='SIGMA CHANNEL', help='Channel of RSS product for instr.-corrected sigma', type=int, default=20)
     parser.add_argument('-P', '--peak', default=False, action="store_true", help='Fix the center to peak in continuum emission?')
     parser.add_argument('-I', '--fix-incl', default=False, action="store_true", help='Fix the inclination to the initial value?')
+    parser.add_argument('-XY', '--fix-cntr', default=False, action="store_true", help='Fix the center?')
     parser.add_argument('-r', '--rescale', metavar='RESCALE', default=1.0, help='Rescale for hexagon sizes', type=float)
     parser.add_argument('-ox', '--offset-ra', metavar='OFFSET RA', default=0.0, help='Astrometry correction to MEGARA image (RA; arcsec)', type=float)
     parser.add_argument('-oy', '--offset-dec', metavar='OFFSET DEC', default=0.0, help='Astrometry correction to MEGARA image (Dec; arcsec)', type=float)
@@ -374,12 +405,15 @@ def main(args=None):
     parser.add_argument('-b', '--b-par', metavar='PARAMETER B', help='Parameter b (arcsec^-1)', type=float)
     parser.add_argument('-pa', '--pa-par', metavar='PARAMETER PA', help='Parameter PA (dg)', type=float)
     parser.add_argument('-z', '--z-par', metavar='PARAMETER Z', help='Parameter Redshift', type=float)
-    parser.add_argument('-i', '--i-par', metavar='PARAMETER I', default=45.0, help='Parameter inclination (dg)', type=float)
-    parser.add_argument('-x', '--x-par', metavar='PARAMETER X', default=0.0, help='Parameter xcenter (km/s)', type=float)
-    parser.add_argument('-y', '--y-par', metavar='PARAMETER Y', default=0.0, help='Parameter ycenter (km/s)', type=float)
+    parser.add_argument('-i', '--i-par', metavar='PARAMETER I', default=None, help='Parameter inclination (dg)', type=float)
+    parser.add_argument('-M', '--i-msk', metavar='I FOR MASKING', default=None, help='Inclination for ellipse masking (dg)', type=float)
+    parser.add_argument('-x', '--x-par', metavar='PARAMETER X', default=0.0, help='Parameter xcenter (arcsec)', type=float)
+    parser.add_argument('-y', '--y-par', metavar='PARAMETER Y', default=0.0, help='Parameter ycenter (arcsec)', type=float)
+    parser.add_argument('-R', '--rmax', metavar='MAX. GALACTOCENTRIC DISTANCE', default=0., help='Maximum galactocentric distance to consider (arcsec)', type=float)
     parser.add_argument('-E', '--errors', default=False, action="store_true", help='Use the errors for the fit?')
     parser.add_argument('-C', '--confidence-intervals', default=False, action="store_true", help='Use the errors for the fit?')
-
+    parser.add_argument('-L', '--ellipse', default=False, action="store_true", help='Plot ellipse?')
+    
     args = parser.parse_args()
 
     PLATESCALE = 1.2120  # arcsec / mm
@@ -396,6 +430,29 @@ def main(args=None):
     ez_tmp = []
     connected_ids = []
 
+# Initial solution
+    print ("Running model ...")
+    p_v=lmfit.Parameters()
+    p_v.add('vsys',value=args.z_par*299792.5, vary=True)
+    p_v.add('pa',value=args.pa_par, min=0., max=360., vary=True)
+    if (args.fix_incl):
+       p_v.add('incldg',value=args.i_par, vary=False)
+    else:
+       p_v.add('incldg',value=args.i_par, min=1., max=90., vary=True)
+    p_v.add('a',value=args.a_par, min=0., vary=True)
+    p_v.add('b',value=args.b_par, min=0., vary=True)
+    if (args.peak):
+       p_v.add('xcenter',value=xpeak, vary=False)
+       p_v.add('ycenter',value=ypeak, vary=False)
+    elif (args.fix_cntr):
+       p_v.add('xcenter',value=args.x_par, vary=False)
+       p_v.add('ycenter',value=args.y_par, vary=False)
+    else:
+       p_v.add('xcenter',value=args.x_par, min=-6., max=+6., vary=True)
+       p_v.add('ycenter',value=args.y_par, min=-6., max=+6., vary=True)
+    initial_p_v = p_v
+
+# Reading the data
     if args.spectrum is not None:
         fname = args.spectrum
         img = fits.open(fname)
@@ -420,41 +477,43 @@ def main(args=None):
         print ("x_peak = ", xpeak)
         print ("y_peak = ", ypeak)
         if (args.signal_to_noise is not None):
-            cutchannel = 3
-            snr = img[0].data[:,cutchannel]
+            snr = img[0].data[:,args.snr_channel]
             for i in range(len(z_inter)):
                 if (snr[i] < float(args.signal_to_noise)):
-                    z_inter[i] = np.sqrt(-1)
-                    ez_inter[i] = np.sqrt(-1)
+                    z_inter[i] = np.nan
+                    ez_inter[i] = np.nan
                 else:
                     z_inter[i] = z_inter[i]
                     ez_inter[i] = ez_inter[i]
         if (args.vmin is not None and args.vmax is not None):
-            cutchannel = 16
-            v = img[0].data[:,cutchannel]
+            v = img[0].data[:,args.channel]
             for i in range(len(z_inter)):
                 if (v[i] < float(args.vmin) or v[i] > float(args.vmax)):
-                    z_inter[i] = np.sqrt(-1)
-                    ez_inter[i] = np.sqrt(-1)
+                    z_inter[i] = np.nan
+                    ez_inter[i] = np.nan
                 else:
                     z_inter[i] = z_inter[i]
                     ez_inter[i] = ez_inter[i]
         if (args.minimum_sigma is not None):
-            cutchannel = 18
-            sigma = img[0].data[:,cutchannel]
+            sigma = img[0].data[:,args.sigma_channel]
             for i in range(len(z_inter)):
                 if (sigma[i] < float(args.minimum_sigma)):
-                    z_inter[i] = np.sqrt(-1)
-                    ez_inter[i] = np.sqrt(-1)
+                    z_inter[i] = np.nan
+                    ez_inter[i] = np.nan
                 else:
                     z_inter[i] = z_inter[i]
                     ez_inter[i] = ez_inter[i]
+            
         z_inter[622] = (z_inter[619]+z_inter[524]+z_inter[528]+z_inter[184]+z_inter[183]+z_inter[621])/6
         ez_inter[622] = (ez_inter[619]+ez_inter[524]+ez_inter[528]+ez_inter[184]+ez_inter[183]+ez_inter[621])/6
         z_tmp.extend(z_inter)
         ez_tmp.extend(ez_inter)
         z = [z_tmp[i] for i in connected_ids]
         ez = [ez_tmp[i] for i in connected_ids]
+        if (args.rmax >= 0.01):
+            print ('Masking based on Galactocentric distance < ', args.rmax)
+            mmodel = mfunc(initial_p_v,x,y,args.rmax)
+            z = [a*b for a,b in zip(z,mmodel.tolist())]
 
     merge_wcs_2d(img['FIBERS'].header, img[0].header, out=img[0].header)
     img[0].header = recompute_wcs(img[0].header, args.offset_ra, args.offset_dec)
@@ -472,6 +531,18 @@ def main(args=None):
     ax.set_ylim([-6.5, 6.5])
     col = hexplot(ax, x, y, z, scale=SCALE*args.rescale, cmap=args.palette, vmin=args.zcut1, vmax=args.zcut2, alpha=0.99, zorder=20)
     cb = plt.colorbar(col)
+    if (args.ellipse and args.rmax):
+       epa = (args.pa_par+90.)*pi/180.
+       t = np.linspace(0, 2*pi, 100)
+       if (args.i_msk is None): 
+           ell = np.array([args.rmax*np.cos(t), (args.rmax * np.arccos(args.i_par*pi/180.))*np.sin(t)])
+       else:
+           ell = np.array([args.rmax*np.cos(t), (args.rmax * np.arccos(args.i_msk*pi/180.))*np.sin(t)])
+       r_rot = np.array([[np.cos(epa), -sin(epa)],[sin(epa), cos(epa)]])
+       ell_rot = np.zeros((2,ell.shape[1]))
+       for i in range(ell.shape[1]):
+           ell_rot[:,i] = np.dot(r_rot,ell[:,i])
+       plt.plot(args.x_par+ell_rot[0,:], args.y_par+ell_rot[1,:], 'darkorange')
     ax.coords.grid(color=args.title_color, alpha=args.alpha, linestyle='dashed') 
     cb.set_label(args.units, fontsize=19)
     ax.coords.grid(color=args.title_color, alpha=args.alpha, linestyle='dashed')
@@ -488,25 +559,6 @@ def main(args=None):
     yspx = np.delete(np.array(y), maskz)
     ezspx = np.delete(ez, maskz)
 
-# Initial solution
-    print ("Running model ...")
-    p_v=lmfit.Parameters()
-    p_v.add('vsys',value=args.z_par*300000.0, vary=True)
-    p_v.add('pa',value=args.pa_par, min=0., max=360., vary=True)
-    if (args.fix_incl):
-       p_v.add('incldg',value=args.i_par, vary=False)
-    else:
-       p_v.add('incldg',value=args.i_par, min=1., max=90., vary=True)
-    p_v.add('a',value=args.a_par, min=0., vary=True)
-    p_v.add('b',value=args.b_par, min=0., vary=True)
-    if (args.peak):
-       p_v.add('xcenter',value=xpeak, vary=False)
-       p_v.add('ycenter',value=ypeak, vary=False)
-    else:
-       p_v.add('xcenter',value=args.x_par, min=-6., max=+6., vary=True)
-       p_v.add('ycenter',value=args.y_par, min=-6., max=+6., vary=True)
- 
-    initial_p_v = p_v
 # Plotting the initial model
     fig = plt.figure(figsize=(9,7))
     ax = fig.add_axes([0.15, 0.1, 0.8, 0.8], projection=wcs2)

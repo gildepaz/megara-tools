@@ -42,14 +42,14 @@ def main(args=None):
         ...  EWD       #  5(6) Flux from window_data - window_continuum / mean_continuum in AA
         ...  FLUXF     #  6(7) Flux from best-fitting function(s) in cgs
         ...  EWF       #  7(8) EW from best-fitting function(s) in AA
-        ...  H0        #  8(9) amplitude for methods 0 & 1 & 2 (first gaussian)
-        ...  H1        #  9(10) central lambda for methods 0 & 1 & 2 (first gaussian)
-        ...  H2        # 10(11) sigma (in AA) for methods 0 & 1 & 2 (first gaussian)
+        ...  H0        #  8(9) amplitude for methods 0 & 1 & 2 & 3 (first gaussian)
+        ...  H1        #  9(10) central lambda for methods 0 & 1 & 2 & 3 (first gaussian)
+        ...  H2        # 10(11) sigma (in AA) for methods 0 & 1 & 2 & 3 (first gaussian)
         ...  H3        # 11(12) h3 for method 0
         ...  H4        # 12(13) h4 for method 0
-        ...  H0B       # 13(14) amplitude for method 2 (second gaussian)
-        ...  H1B       # 14(15) central lambda for method 2 (second gaussian) 
-        ...  H2B       # 15(16) sigma (in AA) for method 2 (second gaussian)
+        ...  H0B       # 13(14) amplitude for methods 2 & 3 (second gaussian)
+        ...  H1B       # 14(15) central lambda for methods 2 & 3 (second gaussian) 
+        ...  H2B       # 15(16) sigma (in AA) for methods 2 & 3 (second gaussian)
         ...  H1KS      # 16(17) velocity in km/s from H1 (1st g)
         ...  H1KSHC    # 17(18) velocity with heliocentric correction in km/s from H1 (1st g)
         ...  H2KS      # 18(19) sigma in km/s from H2 (1st g)
@@ -420,6 +420,7 @@ def main(args=None):
                         print ("FITTING METHOD: GAUSS-HERMITE QUADRATURE")
                         print ("Input(i0,l0,sigma,skew,kurt):  %10.3E %5.2f %5.2f %10.3E %10.3E"%(amp, center, sigma, skew, kurt))
                       gausserr_gh = lambda p,x,y: gaussfunc_gh(p,x)-y
+
                   if args.method == 1:
                       p_gh=Parameters()
                       p_gh.add('amp',value=amp, vary=True);
@@ -429,6 +430,7 @@ def main(args=None):
                         print ("FITTING METHOD: SINGLE GAUSSIAN")
                         print ("Input(i0,l0,sigma):  %10.3E %5.2f %5.2f"%(amp, center, sigma))
                       gausserr_gh = lambda p,x,y: gaussfunc(p,x)-y
+
                   if args.method == 2:
                       p_gh=Parameters()
                       p_gh.add('amp1',value=amp1, vary=True);
@@ -441,16 +443,20 @@ def main(args=None):
                         print ("FITTING METHOD: DOUBLE GAUSSIAN")
                         print ("Input(i1,l1,sig1,i2,l2,sig2):  %10.3E %5.2f %5.2f %10.3E %5.2f %5.2f"%(amp1, center1, sigma1, args.scale_amp2*amp2, center2, sigma2))
                       gausserr_gh = lambda p,x,y: gauss2func(p,x)-y
+
                   if args.method == 3:
-                      umbral=0.0
                       p_gh=Parameters()
-                      p_gh.add('amp1',value=amp1, vary=True, max=umbral)
-                      p_gh.add('amp2',value=amp1, vary=True, max=umbral)
+                      if args.absorption:
+                        p_gh.add('amp1',value=amp1, vary=True, max=0.0)
+                        p_gh.add('amp2',value=amp1, vary=True, max=0.0)
+                      else:
+                        p_gh.add('amp1',value=amp1, vary=True, min=0.0)
+                        p_gh.add('amp2',value=amp1, vary=True, min=0.0)
                       p_gh.add('center',value=center, vary=True)
                       p_gh.add('sigma',value=1.2*sigma, vary=True, min=sigma)
                       if (args.verbose):
                         print ("FITTING METHOD: GAUSSIAN DOUBLET")
-                        print ("Input(i0,l0,sigma):  %10.3E %10.3E %5.2f %5.2f"%(amp1, amp1, center, sigma))
+                        print ("Input(i1,i2,l1,sigma):  %10.3E %10.3E %5.2f %5.2f"%(amp1, amp1, center, sigma))
                       gausserr_gh = lambda p,x,y: gaussfunc_doublet(p,x,z,dist)-y
                       fitout_gh=minimize(gausserr_gh,p_gh,args=(wline,fpline))
                       p_gh.add('center',value=center-dist, vary=True);
@@ -459,6 +465,7 @@ def main(args=None):
                         p_gh.add('center',value=center-dist, vary=True)
                       else:
                         p_gh.add('center',value=center, vary=True)
+
 
                   fitout_gh=minimize(gausserr_gh,p_gh,args=(wline,fpline))
                   if np.isfinite(peak/rms) and (np.abs(amp)/rms) >= float(args.limsnr) and args.verbose:
@@ -506,7 +513,8 @@ def main(args=None):
                       pars_gh=[fitout_gh.params['amp1'].value,fitout_gh.params['amp2'].value,fitout_gh.params['center'].value,fitout_gh.params['sigma'].value,fitout_gh.chisqr]
                       fit_gh=gaussfunc_doublet(fitted_p_gh,wline,z,dist)
                       if (args.verbose):
-                        print ("Output(i0,l0,sigma): %10.3E %10.3E %5.2f %5.2f"%(fitout_gh.params['amp1'].value, fitout_gh.params['amp2'].value, fitout_gh.params['center'].value, fitout_gh.params['sigma'].value))
+                        print ("Output(i1,i2,l1,sigma): %10.3E %10.3E %5.2f %5.2f"%(fitout_gh.params['amp1'].value, fitout_gh.params['amp2'].value, fitout_gh.params['center'].value, fitout_gh.params['sigma'].value))
+
                   eEWm = (rms * cdelt * (cdelt * np.sum(fit_gh) / lcmean) / (cdelt * np.sum(fit_gh))) * np.sqrt(
                   2 * len(fit_gh) + np.sum(fit_gh) / lcmean + (np.sum(fpline) / lcmean) ** 2 / len(fit_gh))
 
@@ -520,7 +528,6 @@ def main(args=None):
                       cdelt * np.sum(fit_gh) / lcmean, eEWm))  # Errors as in Tresse et al. (1999)
                       print("Best-fitting chisqr: %10.3E" % (fitout_gh.chisqr))
 
-                  # Here we write the results to a file and decide whether we should set them first to zero if S/N is below some threshold
                   if (np.isnan(peak/rms)):
                       peak=0.
                       rms=1E-31
@@ -564,7 +571,10 @@ def main(args=None):
                              EH1KS.append(((fitout_gh.params['center'].stderr)/float(args.ctwl))*c_km)
                           else:
                              EH1KS.append(nonfit)
-                          H1KSHC.append(vheliocorr+((fitout_gh.params['center'].value)/float(args.ctwl)-1.0)*c_km)
+                          if (args.heliocentric):
+                             H1KSHC.append(vheliocorr+((fitout_gh.params['center'].value)/float(args.ctwl)-1.0)*c_km)
+                          else:
+                             H1KSHC.append(nonfit)
                           H2KS.append(((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)
                           if (np.isfinite(np.sqrt((((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))):
                              H2KLC.append(np.sqrt((((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))
@@ -577,6 +587,7 @@ def main(args=None):
                           H2KLCB.append(nonfit)
                           FLUXF1.append(nonfit)
                           FLUXF2.append(nonfit)
+
                       if args.method == 1:
                           H0.append(fitout_gh.params['amp'].value)
                           H1.append(fitout_gh.params['center'].value)
@@ -591,7 +602,10 @@ def main(args=None):
                              EH1KS.append(((fitout_gh.params['center'].stderr)/float(args.ctwl))*c_km)
                           else:
                              EH1KS.append(nonfit)
-                          H1KSHC.append(vheliocorr+((fitout_gh.params['center'].value)/float(args.ctwl)-1.0)*c_km)
+                          if (args.heliocentric):
+                             H1KSHC.append(vheliocorr+((fitout_gh.params['center'].value)/float(args.ctwl)-1.0)*c_km)
+                          else:
+                             H1KSHC.append(nonfit)
                           H2KS.append(((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)
                           if (np.isfinite(np.sqrt((((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))):
                              H2KLC.append(np.sqrt((((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))
@@ -604,6 +618,7 @@ def main(args=None):
                           H2KLCB.append(nonfit)
                           FLUXF1.append(nonfit)
                           FLUXF2.append(nonfit)
+
                       if args.method == 2:
                           H0.append(fitout_gh.params['amp1'].value)
                           H1.append(fitout_gh.params['center1'].value)
@@ -618,7 +633,10 @@ def main(args=None):
                              EH1KS.append(((fitout_gh.params['center1'].stderr)/float(args.ctwl))*c_km)
                           else:
                              EH1KS.append(nonfit)
-                          H1KSHC.append(vheliocorr+((fitout_gh.params['center1'].value)/float(args.ctwl)-1.0)*c_km)
+                          if (args.heliocentric):
+                             H1KSHC.append(vheliocorr+((fitout_gh.params['center1'].value)/float(args.ctwl)-1.0)*c_km)
+                          else:
+                             H1KSHC.append(nonfit)
                           H2KS.append(((fitout_gh.params['sigma1'].value)/float(args.ctwl))*c_km)
                           if (np.isfinite(np.sqrt((((fitout_gh.params['sigma1'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))):
                              H2KLC.append(np.sqrt((((fitout_gh.params['sigma1'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))
@@ -629,7 +647,10 @@ def main(args=None):
                              EH1KSB.append(((fitout_gh.params['center2'].stderr)/float(args.ctwl))*c_km)
                           else:
                              EH1KSB.append(nonfit)
-                          H1KSBHC.append(vheliocorr+((fitout_gh.params['center2'].value)/float(args.ctwl)-1.0)*c_km)
+                          if (args.heliocentric):
+                             H1KSBHC.append(vheliocorr+((fitout_gh.params['center2'].value)/float(args.ctwl)-1.0)*c_km)
+                          else:
+                             H1KSBHC.append(nonfit)
                           H2KSB.append(((fitout_gh.params['sigma2'].value)/float(args.ctwl))*c_km)
                           if (np.isfinite(np.sqrt((((fitout_gh.params['sigma2'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))):
                              H2KLCB.append(np.sqrt((((fitout_gh.params['sigma2'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))
@@ -647,24 +668,36 @@ def main(args=None):
                           H3.append(nonfit)
                           H4.append(nonfit)
                           H0B.append(fitout_gh.params['amp2'].value)
-                          H1B.append(nonfit)
-                          H2B.append(nonfit)
+                          H1B.append(fitout_gh.params['center'].value+dist)
+                          H2B.append(fitout_gh.params['sigma'].value)
                           H1KS.append(((fitout_gh.params['center'].value)/float(args.ctwl)-1.0)*c_km)
                           if (fitout_gh.params['center'].stderr is not None):
                              EH1KS.append(((fitout_gh.params['center'].stderr)/float(args.ctwl))*c_km)
                           else:
                              EH1KS.append(nonfit)
-                          H1KSHC.append(vheliocorr+((fitout_gh.params['center'].value)/float(args.ctwl)-1.0)*c_km)
+                          if (args.heliocentric):
+                             H1KSHC.append(vheliocorr+((fitout_gh.params['center'].value)/float(args.ctwl)-1.0)*c_km)
+                          else:
+                             H1KSBHC.append(nonfit)
                           H2KS.append(((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)
                           if (np.isfinite(np.sqrt((((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))):
                              H2KLC.append(np.sqrt((((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))
                           else:
                              H2KLC.append(0.)
-                          H1KSB.append(nonfit)
-                          EH1KSB.append(nonfit)
-                          H1KSBHC.append(nonfit)
-                          H2KSB.append(nonfit)
-                          H2KLCB.append(nonfit)
+                          H1KSB.append(((fitout_gh.params['center'].value+dist)/float(args.ctwl)-1.0)*c_km)
+                          if (fitout_gh.params['center'].stderr is not None):
+                             EH1KSB.append(((fitout_gh.params['center'].stderr)/float(args.ctwl))*c_km)
+                          else:
+                             EH1KSB.append(nonfit)
+                          if (args.heliocentric):
+                             H1KSBHC.append(vheliocorr+((fitout_gh.params['center'].value+dist)/float(args.ctwl)-1.0)*c_km)
+                          else:
+                             H1KSBHC.append(nonfit)
+                          H2KSB.append(((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)
+                          if (np.isfinite(np.sqrt((((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))):
+                             H2KLCB.append(np.sqrt((((fitout_gh.params['sigma'].value)/float(args.ctwl))*c_km)**2-(c_km/(R*2.35))**2))
+                          else:
+                             H2KLCB.append(nonfit)
                           s1 = fitout_gh.params['sigma'].value
                           FLUXF1.append(1.064*fitout_gh.params['amp1'].value*(2.35*s1))
                           FLUXF2.append(1.064*fitout_gh.params['amp2'].value*(2.35*s1))

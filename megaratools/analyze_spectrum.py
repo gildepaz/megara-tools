@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2020 Universidad Complutense de Madrid
+# Copyright 2019-2022 Universidad Complutense de Madrid
 #
 # This file is part of Megara Tools
 #
@@ -24,7 +24,7 @@ import csv
 from lmfit import minimize, Parameters, fit_report
 
 from .analyze import axvlines
-from .analyze import gaussfunc, gaussfunc_gh, gauss2func
+from .analyze import gaussfunc, gaussfunc_gh, gauss2func, gaussfunc_doublet
 from .analyze import linfunc
 
 
@@ -35,7 +35,7 @@ def main(args=None):
     parser.add_argument('-l', '--is-a-list', default=False, action="store_true", help='Use for -s being a list of FITS spectra')
     parser.add_argument('-a', '--absorption', default=False, action="store_true", help='Are you analyzing an absorption feature?')
     parser.add_argument('-i', '--index', default=False, action="store_true", help='Measuring spectral indices?')
-    parser.add_argument('-f', '--method', default=0, choices=[0,1,2], metavar='FITTING FUNCTION (0,1,2)', help='Fitting function (0=gauss_hermite, 1=gauss, 2=double_gauss)', type=int)
+    parser.add_argument('-f', '--method', default=0, choices=[0,1,2,3], metavar='FITTING FUNCTION (0,1,2,3)', help='Fitting function (0=gauss_hermite, 1=gauss, 2=two_gauss, 3=doublet)', type=int)
     parser.add_argument('-w', '--ctwl', metavar='LINE CENTRAL WAVELENGTH', help='Central rest-frame wavelength for line (AA)',
                         type=float)
     parser.add_argument('-k', '--use-peak', default=False, action="store_true", help='Use peak first guess on central wavelength')
@@ -62,9 +62,11 @@ def main(args=None):
     parser.add_argument('-o', '--output', metavar='OUTPUT-PDF', help='Output PDF', type=argparse.FileType('w'))
     parser.add_argument('-p', '--plot', default=False, action="store_true" , help='Plot spectrum?')
     parser.add_argument('-n', '--no-legend', default=False, action="store_true", help='Legend?')
-    parser.add_argument('--heliocentric', default=False, action="store_true", help='Apply heliocentric correction to velocities?')
+    parser.add_argument('-H', '--heliocentric', default=False, action="store_true", help='Apply heliocentric correction to velocities?')
+
     parser.add_argument('-co', '--coord', metavar='TARGET COORDINATES', help='Coordinates ("01:58:00 +65:43:05")')
     parser.add_argument('-tm', '--time', metavar='TIME', help='Time in format "2019-09-24T02:23:22.19"')
+    parser.add_argument('-d', '--distance', metavar='FIXED AA BETWEEN LINES', help='Fixed distance between lines (AA)', default=0., type=float)
     parser.add_argument('-v', '--verbose', default=False, action="store_true", help='Verbose mode?')
     parser.add_argument('-V', '--minimum-output', default=False, action="store_true", help='Minimum output for scripting purposes?')
 
@@ -77,29 +79,22 @@ def main(args=None):
     two = 2
     zero = np.float64(0.0)
 
-# Heliocentric correction
-    if (args.heliocentric and args.coord is not None and args.time is not None):
-        gtc = EarthLocation.of_site('lapalma')
-        heliocorr = SkyCoord(args.coord, frame='fk5', unit=(u.hourangle, u.deg)).radial_velocity_correction('heliocentric', obstime=Time(args.time), location=gtc)
-        helio2 = heliocorr.to(u.km/u.s)
-        vheliocorr = float(helio2.value)
-        if (args.verbose):
-            print ("Heliocentric correction (km/s): %5.2f"%(vheliocorr))
-    else:
-        if (args.verbose):
-            print ("No heliocentric correction is computed.")
-        vheliocorr = 0.
- 
     if args.redshift is not None:
        z=float(args.redshift)
     else:
        z=0.
+
+    if args.distance != None:
+       dist=float(args.distance)
+    else:
+       dist=0.
 
 # Plotting
     if args.spec_table!=None or args.spectrum!=None:
        plt.figure()
 
     if args.spectrum!=None:   
+
 # Reading spectrum/spectra
        if args.is_a_list == True:
           list_files = args.spectrum.readlines() 
@@ -114,6 +109,14 @@ def main(args=None):
           lambda0 = prihdr['CRVAL1']
           cdelt = prihdr['CDELT1']
           crpix = prihdr['CRPIX1']
+
+# Heliocentric correction
+          if args.heliocentric:
+               gtc = EarthLocation.of_site('lapalma')
+               sc = SkyCoord(ra=prihdr['RADEG']*u.deg, dec=prihdr['DECDEG']*u.deg)
+               heliocorr = sc.radial_velocity_correction('heliocentric', obstime=Time(prihdr['DATE-OBS']), location=gtc)
+               vheliocorr = heliocorr.to(u.km/u.s).value
+
           if ('VPH' in prihdr):
              vph = prihdr['VPH']
           else:
@@ -158,7 +161,7 @@ def main(args=None):
                  sys.exit(1)
               flux.append(flux_vector)
   
-          plt.xlim(float(args.pcut1),float(args.pcut2))
+          plt.xlim(float(args.pcut1)*(1.+z),float(args.pcut2)*(1.+z))
         
           if "LR" in vph:
               plt.plot(wave, flux, 'blue', label = 'input spectrum')
@@ -236,17 +239,17 @@ def main(args=None):
           fit_lin = linfunc(fitted_p_lin, wline)
           lcmean = np.mean(fit_lin) # Mean continuum within the line range
           fpline = fline - fit_lin
-#          fpline = fline - cmean
           result = np.where(sign*np.array(fline) == np.amax(sign*np.array(fline)))
           lpeak = wline[result[0][0]]
 
+          amp = sign*peak-lcmean
           if (args.verbose): 
               print ("BASIC NUMBERS:")
-              print ("(mean,rms,lpk,pk,S/N)",lcmean,rms,lpeak,peak,peak/rms)
+              print ("(mean,rms,lpk,pk,S/N)",lcmean,rms,lpeak,peak,(np.abs(amp)/rms))
+          eEWd=(rms*cdelt*(cdelt*np.sum(fpline)/lcmean)/(cdelt*np.sum(fpline)))*np.sqrt(2*len(fpline)+np.sum(fpline)/lcmean+(np.sum(fpline)/lcmean)**2/len(fpline))
 
 # Initial guess on parameters
 
-          amp = sign*peak-lcmean
           if (args.use_peak) == False:
             center = float(args.ctwl)*(1.+z)
           else:
@@ -277,6 +280,7 @@ def main(args=None):
                   print ("FITTING METHOD: GAUSS-HERMITE QUADRATURE")
                   print ("Input(i0,l0,sigma,skew,kurt):  %10.3E %5.2f %5.2f %10.3E %10.3E"%(amp, center, sigma, skew, kurt))
               gausserr_gh = lambda p,x,y: gaussfunc_gh(p,x)-y 
+
           if args.method == 1:
               p_gh=Parameters()
               p_gh.add('amp',value=amp, vary=True)
@@ -286,6 +290,7 @@ def main(args=None):
                   print ("FITTING METHOD: SINGLE GAUSSIAN")
                   print ("Input(i0,l0,sigma):  %10.3E %5.2f %5.2f"%(amp, center, sigma))
               gausserr_gh = lambda p,x,y: gaussfunc(p,x)-y
+
           if args.method == 2:
               p_gh=Parameters()
               p_gh.add('amp1',value=amp1, vary=True);
@@ -298,60 +303,97 @@ def main(args=None):
                   print ("FITTING METHOD: DOUBLE GAUSSIAN")
                   print ("Input(i1,l1,sig1,i2,l2,sig2):  %10.3E %5.2f %5.2f %10.3E %5.2f %5.2f"%(amp1, center1, sigma1, args.scale_amp2*amp2, center2, sigma2))
               gausserr_gh = lambda p,x,y: gauss2func(p,x)-y
-                
+          
+          if args.method == 3:
+              p_gh=Parameters()
+              if args.absorption:
+                p_gh.add('amp1',value=amp1, vary=True, max=0.0)
+                p_gh.add('amp2',value=amp1, vary=True, max=0.0)
+              else:
+                p_gh.add('amp1',value=amp1, vary=True, min=0.0)
+                p_gh.add('amp2',value=amp1, vary=True, min=0.0)
+              p_gh.add('center',value=center, vary=True)
+              p_gh.add('sigma',value=1.2*sigma, vary=True, min=sigma)
+              if (args.verbose):
+                print ("FITTING METHOD: GAUSSIAN DOUBLET")
+                print ("Input(i1,i2,l1,sigma):  %10.3E %10.3E %5.2f %5.2f"%(amp1, amp1, center, sigma))
+              gausserr_gh = lambda p,x,y: gaussfunc_doublet(p,x,z,dist)-y
+              fitout_gh=minimize(gausserr_gh,p_gh,args=(wline,fpline))
+              p_gh.add('center',value=center-dist, vary=True);
+              fitout_gh2=minimize(gausserr_gh,p_gh,args=(wline,fpline))
+              if (abs(abs(fitout_gh2.params['amp2'].value) - abs(fitout_gh2.params['amp1'].value)) < abs(abs(fitout_gh.params['amp2'].value) - abs(fitout_gh.params['amp1'].value))) and (center-dist > float(args.lcut1)*(1.+z)) and (fitout_gh2.params['amp1'].value < 0):
+                p_gh.add('center',value=center-dist, vary=True)
+              else:
+                p_gh.add('center',value=center, vary=True)
+
           fitout_gh=minimize(gausserr_gh,p_gh,args=(wline,fpline))
           if (args.verbose):
               print(fit_report(fitout_gh.params, show_correl=False))
           fitted_p_gh = fitout_gh.params
-          tmp = fitout_gh
-          if args.method == 2:
-             tmp = fitted_p_gh
-             tmp.add('amp',value=tmp['amp1'].value)
-             tmp.add('center',value=tmp['center1'].value)
-             tmp.add('sigma',value=tmp['sigma1'].value)
-             fitted_p_gh1 = tmp
-             fit_gh1=gaussfunc(fitted_p_gh1,wline)
-             if (args.verbose):
-                 print ("Flux1 from model: %10.3E+/-%10.3E"%(cdelt*np.sum(fit_gh1), rms*cdelt*np.sqrt(2*len(fit_gh1)+(np.sum(fit_gh1)/lcmean)))) # Errors as in Tresse et al. (1999)
-             tmp2 = fitted_p_gh
-             tmp2.add('amp',value=tmp2['amp2'].value)
-             tmp2.add('center',value=tmp2['center2'].value)
-             tmp2.add('sigma',value=tmp2['sigma2'].value)
-             fitted_p_gh2 = tmp2
-             fit_gh2=gaussfunc(fitted_p_gh2,wline)
-             if (args.verbose):
-                 print ("Flux2 from model: %10.3E+/-%10.3E"%(cdelt*np.sum(fit_gh2), rms*cdelt*np.sqrt(2*len(fit_gh2)+(np.sum(fit_gh2)/lcmean)))) # Errors as in Tresse et al. (1999)
 
           if args.method == 0:
               pars_gh=[fitout_gh.params['amp'].value,fitout_gh.params['center'].value,fitout_gh.params['sigma'].value,fitout_gh.params['skew'].value,fitout_gh.params['kurt'].value,fitout_gh.chisqr]
               fit_gh=gaussfunc_gh(fitted_p_gh,wline)
               if (args.verbose):
                   print ("Output(i0*E-17,l0,sigma,skew,kurt): %10.3E %5.2f %5.2f %10.3E %10.3E"%(fitout_gh.params['amp'].value, fitout_gh.params['center'].value, fitout_gh.params['sigma'].value, fitout_gh.params['skew'].value, fitout_gh.params['kurt'].value))
+                  print('WARNING::::: out.covar == None :::::: Fit Sucess = '+ str(fitout_gh.success) + ' :: Uncertainties estimated = ' + str(fitout_gh.errorbars))
+
           if args.method == 1:
               pars_gh=[fitout_gh.params['amp'].value,fitout_gh.params['center'].value,fitout_gh.params['sigma'].value,fitout_gh.chisqr]
               fit_gh=gaussfunc(fitted_p_gh,wline)
               if (args.verbose):
                   print ("Output(i0*E-17,l0,sigma): %10.3E %5.2f %5.2f"%(fitout_gh.params['amp'].value, fitout_gh.params['center'].value, fitout_gh.params['sigma'].value))
+                  print('WARNING::::: out.covar == None :::::: Fit Sucess = '+ str(fitout_gh.success) + ' :: Uncertainties estimated = ' + str(fitout_gh.errorbars))
+
           if args.method == 2:
-              pars_gh=[fitout_gh.params['amp1'].value,fitout_gh.params['center1'].value,fitout_gh.params['sigma1'].value,fitout_gh.params['amp2'].value,fitout_gh.params['center2'].value,fitout_gh.params['sigma2'].value,fitout_gh.chisqr] 
+              pars_gh=[fitout_gh.params['amp1'].value,fitout_gh.params['center1'].value,fitout_gh.params['sigma1'].value,fitout_gh.params['amp2'].value,fitout_gh.params['center2'].value,fitout_gh.params['sigma2'].value,fitout_gh.chisqr]
               fit_gh=gauss2func(fitted_p_gh,wline)
               if (args.verbose):
-                  print ("Output(i1*E-17,l1,sig1,i2,l2,sig2): %10.3E %5.2f %5.2f %10.3E %5.2f %5.2f"%(fitout_gh.params['amp1'].value, fitout_gh.params['center1'].value, fitout_gh.params['sigma1'].value, fitout_gh.params['amp2'].value, fitout_gh.params['center2'].value, fitout_gh.params['sigma2'].value))
-          eEWd=(rms*cdelt*(cdelt*np.sum(fpline)/lcmean)/(cdelt*np.sum(fpline)))*np.sqrt(2*len(fpline)+np.sum(fpline)/lcmean+(np.sum(fpline)/lcmean)**2/len(fpline))
+                print ("Output(i1,l1,sig1,i2,l2,sig2): %10.3E %5.2f %5.2f %10.3E %5.2f %5.2f"%(fitout_gh.params['amp1'].value, fitout_gh.params['center1'].value, fitout_gh.params['sigma1'].value, fitout_gh.params['amp2'].value, fitout_gh.params['center2'].value, fitout_gh.params['sigma2'].value))
+              tmp = fitted_p_gh
+              tmp.add('amp', value=tmp['amp1'].value)
+              tmp.add('center', value=tmp['center1'].value)
+              tmp.add('sigma', value=tmp['sigma1'].value)
+              fitted_p_gh1 = tmp
+              fit_gh1 = gaussfunc(fitted_p_gh1, wline)
+              if (args.verbose):
+                  print("Flux1 from model: %10.3E+/-%10.3E" % (cdelt * np.sum(fit_gh1), rms * cdelt * np.sqrt(2 * len(fit_gh1) + (np.sum(fit_gh1) / lcmean))))  # Errors as in Tresse et al. (1999)
+              tmp2 = fitted_p_gh
+              tmp2.add('amp', value=tmp2['amp2'].value)
+              tmp2.add('center', value=tmp2['center2'].value)
+              tmp2.add('sigma', value=tmp2['sigma2'].value)
+              fitted_p_gh2 = tmp2
+              fit_gh2 = gaussfunc(fitted_p_gh2, wline)
+              if (args.verbose):
+                  print("Flux2 from model: %10.3E+/-%10.3E" % (cdelt * np.sum(fit_gh2), rms * cdelt * np.sqrt(2 * len(fit_gh2) + (np.sum(fit_gh2) / lcmean))))  # Errors as in Tresse et al. (1999)
+
+          if args.method == 3:
+              pars_gh=[fitout_gh.params['amp1'].value,fitout_gh.params['amp2'].value,fitout_gh.params['center'].value,fitout_gh.params['sigma'].value,fitout_gh.chisqr]
+              fit_gh=gaussfunc_doublet(fitted_p_gh,wline,z,dist)
+              if (args.verbose):
+                print ("Output(i1,i2,l1,sigma): %10.3E %10.3E %5.2f %5.2f"%(fitout_gh.params['amp1'].value, fitout_gh.params['amp2'].value, fitout_gh.params['center'].value, fitout_gh.params['sigma'].value))
+
           eEWm=(rms*cdelt*(cdelt*np.sum(fit_gh)/lcmean)/(cdelt*np.sum(fit_gh)))*np.sqrt(2*len(fit_gh)+np.sum(fit_gh)/lcmean+(np.sum(fpline)/lcmean)**2/len(fit_gh))
+
           if (args.verbose):
               print ("Flux & EW from data:  %10.3E+/-%10.3E %5.2f+/-%5.2f"%(cdelt*np.sum(fpline), rms*cdelt*np.sqrt(2*len(fpline)+(np.sum(fpline)/lcmean)), cdelt*np.sum(fpline)/lcmean, eEWd)) # Errors as in Tresse et al. (1999)
               print ("Flux & EW from model: %10.3E+/-%10.3E %5.2f+/-%5.2f"%(cdelt*np.sum(fit_gh), rms*cdelt*np.sqrt(2*len(fit_gh)+(np.sum(fit_gh)/lcmean)), cdelt*np.sum(fit_gh)/lcmean, eEWm)) # Errors as in Tresse et al. (1999)
               print ("Best-fitting chisqr: %10.3E"%(fitout_gh.chisqr))
 
-# Here we should write the results to a file and decide whether we should set them first to zero if S/N is below some threshold
+# Minimum output
           if (args.minimum_output):
+
               if args.method == 0:
-                 print ("%5.2f %10.3E %10.3E %10.3E %5.2f %d %10.3E %5.2f %5.2f %10.3E %10.3E %10.3E %10.3E %5.2f %5.2f %10.3E %10.3E %5.2f %5.2f"%(vheliocorr, fitout_lin.params['slope'].value, fitout_lin.params['yord'].value, rms, peak/rms, args.method, fitout_gh.params['amp'].value, fitout_gh.params['center'].value, fitout_gh.params['sigma'].value, fitout_gh.params['skew'].value, fitout_gh.params['kurt'].value, cdelt*np.sum(fpline), rms*cdelt*np.sqrt(2*len(fpline)+(np.sum(fpline)/lcmean)), cdelt*np.sum(fpline)/lcmean, eEWd, cdelt*np.sum(fit_gh), rms*cdelt*np.sqrt(2*len(fit_gh)+(np.sum(fit_gh)/lcmean)), cdelt*np.sum(fit_gh)/lcmean, eEWm))
+                 print ("%5.2f %10.3E %10.3E %10.3E %5.2f %d %10.3E %5.2f %5.2f %10.3E %10.3E %10.3E %10.3E %5.2f %5.2f %10.3E %10.3E %5.2f %5.2f"%(vheliocorr, fitout_lin.params['slope'].value, fitout_lin.params['yord'].value, rms, (np.abs(amp)/rms), args.method, fitout_gh.params['amp'].value, fitout_gh.params['center'].value, fitout_gh.params['sigma'].value, fitout_gh.params['skew'].value, fitout_gh.params['kurt'].value, cdelt*np.sum(fpline), rms*cdelt*np.sqrt(2*len(fpline)+(np.sum(fpline)/lcmean)), cdelt*np.sum(fpline)/lcmean, eEWd, cdelt*np.sum(fit_gh), rms*cdelt*np.sqrt(2*len(fit_gh)+(np.sum(fit_gh)/lcmean)), cdelt*np.sum(fit_gh)/lcmean, eEWm))
+
               if args.method == 1:
-                 print ("%5.2f %10.3E %10.3E %10.3E %5.2f %d %10.3E %5.2f %5.2f %10.3E %10.3E %5.2f %5.2f %10.3E %10.3E %5.2f %5.2f"%(vheliocorr, fitout_lin.params['slope'].value, fitout_lin.params['yord'].value, rms, peak/rms, args.method, fitout_gh.params['amp'].value, fitout_gh.params['center'].value, fitout_gh.params['sigma'].value, cdelt*np.sum(fpline), rms*cdelt*np.sqrt(2*len(fpline)+(np.sum(fpline)/lcmean)), cdelt*np.sum(fpline)/lcmean, eEWd, cdelt*np.sum(fit_gh), rms*cdelt*np.sqrt(2*len(fit_gh)+(np.sum(fit_gh)/lcmean)), cdelt*np.sum(fit_gh)/lcmean, eEWm))
+                 print ("%5.2f %10.3E %10.3E %10.3E %5.2f %d %10.3E %5.2f %5.2f %10.3E %10.3E %5.2f %5.2f %10.3E %10.3E %5.2f %5.2f"%(vheliocorr, fitout_lin.params['slope'].value, fitout_lin.params['yord'].value, rms, (np.abs(amp)/rms), args.method, fitout_gh.params['amp'].value, fitout_gh.params['center'].value, fitout_gh.params['sigma'].value, cdelt*np.sum(fpline), rms*cdelt*np.sqrt(2*len(fpline)+(np.sum(fpline)/lcmean)), cdelt*np.sum(fpline)/lcmean, eEWd, cdelt*np.sum(fit_gh), rms*cdelt*np.sqrt(2*len(fit_gh)+(np.sum(fit_gh)/lcmean)), cdelt*np.sum(fit_gh)/lcmean, eEWm))
+
               if args.method == 2:
-                 print ("%5.2f %10.3E %10.3E %10.3E %5.2f %d %10.3E %5.2f %5.2f %10.3E %5.2f %5.2f %10.3E %10.3E %10.3E %10.3E"%(vheliocorr, fitout_lin.params['slope'].value, fitout_lin.params['yord'].value, rms, peak/rms, args.method, fitout_gh.params['amp1'].value, fitout_gh.params['center1'].value, fitout_gh.params['sigma1'].value, fitout_gh.params['amp2'].value, fitout_gh.params['center2'].value, fitout_gh.params['sigma2'].value, cdelt*np.sum(fit_gh1), rms*cdelt*np.sqrt(2*len(fit_gh1)+(np.sum(fit_gh1)/lcmean)), cdelt*np.sum(fit_gh2), rms*cdelt*np.sqrt(2*len(fit_gh2)+(np.sum(fit_gh2)/lcmean))))
+                 print ("%5.2f %10.3E %10.3E %10.3E %5.2f %d %10.3E %5.2f %5.2f %10.3E %5.2f %5.2f %10.3E %10.3E %10.3E %10.3E"%(vheliocorr, fitout_lin.params['slope'].value, fitout_lin.params['yord'].value, rms, (np.abs(amp)/rms), args.method, fitout_gh.params['amp1'].value, fitout_gh.params['center1'].value, fitout_gh.params['sigma1'].value, fitout_gh.params['amp2'].value, fitout_gh.params['center2'].value, fitout_gh.params['sigma2'].value, cdelt*np.sum(fit_gh1), rms*cdelt*np.sqrt(2*len(fit_gh1)+(np.sum(fit_gh1)/lcmean)), cdelt*np.sum(fit_gh2), rms*cdelt*np.sqrt(2*len(fit_gh2)+(np.sum(fit_gh2)/lcmean))))
+
+              if args.method == 3:
+                 print ("%5.2f %10.3E %10.3E %10.3E %5.2f %d %10.3E %5.2f %5.2f %10.3E %5.2f %5.2f %10.3E %10.3E %10.3E %10.3E"%(vheliocorr, fitout_lin.params['slope'].value, fitout_lin.params['yord'].value, rms, (np.abs(amp)/rms), args.method, fitout_gh.params['amp1'].value, fitout_gh.params['center'].value, fitout_gh.params['sigma'].value, fitout_gh.params['amp2'].value, fitout_gh.params['center'].value+dist, fitout_gh.params['sigma'].value, cdelt*np.sum(fit_gh1), rms*cdelt*np.sqrt(2*len(fit_gh1)+(np.sum(fit_gh1)/lcmean)), cdelt*np.sum(fit_gh2), rms*cdelt*np.sqrt(2*len(fit_gh2)+(np.sum(fit_gh2)/lcmean))))
 
           plt.plot(wcont, fit_con, 'red', label = 'Continuum fit')
           resid_gh=fpline-fit_gh
